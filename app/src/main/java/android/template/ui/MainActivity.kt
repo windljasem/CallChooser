@@ -34,18 +34,26 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            CallChooserScreen()
+            CallChooserUI()
         }
     }
 
     @Composable
-    fun CallChooserScreen() {
+    fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
         var normalized by remember { mutableStateOf("") }
         var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
         val scope = rememberCoroutineScope()
 
-        Column(Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+
+            Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
+
+            Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = query,
@@ -65,11 +73,14 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(8.dp))
-            Text("Нормалізований: $normalized", style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
+            Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
 
-            LazyColumn {
+            Spacer(Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
                 items(results) { item ->
                     Column(
                         modifier = Modifier
@@ -77,8 +88,9 @@ class MainActivity : ComponentActivity() {
                             .clickable {
                                 query = item.second
                                 normalized = normalizeNumber(item.second)
+                                results = emptyList()   // 🔥 ховаємо список
                             }
-                            .padding(12.dp)
+                            .padding(10.dp)
                     ) {
                         Text(item.first)
                         Text(item.second, style = MaterialTheme.typography.bodySmall)
@@ -86,72 +98,50 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 Button(onClick = { openGsm(normalized) }) { Text("GSM") }
                 Button(onClick = { openWhatsApp(normalized) }) { Text("WhatsApp") }
                 Button(onClick = { openTelegram(normalized) }) { Text("Telegram") }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Button(onClick = { openViber(normalized) }) { Text("Viber") }
-                Button(onClick = { openSignal(normalized) }) { Text("Signal") }
             }
         }
     }
 
-    // --- Actions ---
+    // ====== ACTIONS ======
 
     private fun openGsm(num: String) {
-    if (num.isBlank()) return
-    startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
-}
-
-private fun openWhatsApp(num: String) {
-    openAppOrFallback(
-        Uri.parse("https://wa.me/$num"),
-        "com.whatsapp",
-        num
-    )
-}
-
-private fun openTelegram(num: String) {
-    openAppOrFallback(
-        Uri.parse("tg://resolve?phone=$num"),
-        "org.telegram.messenger",
-        num
-    )
-}
-
-private fun openViber(num: String) {
-    openAppOrFallback(
-        Uri.parse("viber://chat?number=$num"),
-        "com.viber.voip",
-        num
-    )
-}
-
-private fun openSignal(num: String) {
-    openAppOrFallback(
-        Uri.parse("sgnl://send?phone=$num"),
-        "org.thoughtcrime.securesms",
-        num
-    )
-}
-
-private fun openAppOrFallback(uri: Uri, packageName: String, num: String) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        intent.setPackage(packageName)
-        startActivity(intent)
-    } catch (e: Exception) {
-        // якщо месенджера немає — GSM
-        openGsm(num)
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
     }
-}
 
-    // --- Utils ---
+    private fun openWhatsApp(num: String) {
+        openAppOrFallback(Uri.parse("https://wa.me/$num"), "com.whatsapp", num)
+    }
+
+    private fun openTelegram(num: String) {
+        openAppOrFallback(Uri.parse("tg://resolve?phone=$num"), "org.telegram.messenger", num)
+    }
+
+    private fun openViber(num: String) {
+        openAppOrFallback(Uri.parse("viber://chat?number=$num"), "com.viber.voip", num)
+    }
+
+    private fun openAppOrFallback(uri: Uri, pkg: String, num: String) {
+        try {
+            val i = Intent(Intent.ACTION_VIEW, uri)
+            i.setPackage(pkg)
+            startActivity(i)
+        } catch (e: Exception) {
+            openGsm(num)
+        }
+    }
+
+    // ====== UTILS ======
 
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
