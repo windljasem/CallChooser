@@ -1,8 +1,10 @@
 package android.template.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
@@ -64,12 +66,7 @@ class MainActivity : ComponentActivity() {
             )
 
             Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Нормалізований номер: $normalized",
-                style = MaterialTheme.typography.bodySmall
-            )
-
+            Text("Нормалізований: $normalized", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(12.dp))
 
             LazyColumn {
@@ -88,13 +85,54 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Button(onClick = { openGsm(normalized) }) { Text("GSM") }
+                Button(onClick = { openWhatsApp(normalized) }) { Text("WhatsApp") }
+                Button(onClick = { openTelegram(normalized) }) { Text("Telegram") }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Button(onClick = { openViber(normalized) }) { Text("Viber") }
+                Button(onClick = { openSignal(normalized) }) { Text("Signal") }
+            }
         }
     }
+
+    // --- Actions ---
+
+    private fun openGsm(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
+    }
+
+    private fun openWhatsApp(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$num")))
+    }
+
+    private fun openTelegram(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$num")))
+    }
+
+    private fun openViber(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("viber://chat?number=$num")))
+    }
+
+    private fun openSignal(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("sgnl://send?phone=$num")))
+    }
+
+    // --- Utils ---
 
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
 
-        // Україна
         if (digits.startsWith("0") && digits.length == 10) {
             digits = "38$digits"
         }
