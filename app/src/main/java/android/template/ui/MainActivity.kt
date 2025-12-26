@@ -104,29 +104,52 @@ class MainActivity : ComponentActivity() {
     // --- Actions ---
 
     private fun openGsm(num: String) {
-        if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
-    }
+    if (num.isBlank()) return
+    startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
+}
 
-    private fun openWhatsApp(num: String) {
-        if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$num")))
-    }
+private fun openWhatsApp(num: String) {
+    openAppOrFallback(
+        Uri.parse("https://wa.me/$num"),
+        "com.whatsapp",
+        num
+    )
+}
 
-    private fun openTelegram(num: String) {
-        if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$num")))
-    }
+private fun openTelegram(num: String) {
+    openAppOrFallback(
+        Uri.parse("tg://resolve?phone=$num"),
+        "org.telegram.messenger",
+        num
+    )
+}
 
-    private fun openViber(num: String) {
-        if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("viber://chat?number=$num")))
-    }
+private fun openViber(num: String) {
+    openAppOrFallback(
+        Uri.parse("viber://chat?number=$num"),
+        "com.viber.voip",
+        num
+    )
+}
 
-    private fun openSignal(num: String) {
-        if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("sgnl://send?phone=$num")))
+private fun openSignal(num: String) {
+    openAppOrFallback(
+        Uri.parse("sgnl://send?phone=$num"),
+        "org.thoughtcrime.securesms",
+        num
+    )
+}
+
+private fun openAppOrFallback(uri: Uri, packageName: String, num: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        intent.setPackage(packageName)
+        startActivity(intent)
+    } catch (e: Exception) {
+        // якщо месенджера немає — GSM
+        openGsm(num)
     }
+}
 
     // --- Utils ---
 
