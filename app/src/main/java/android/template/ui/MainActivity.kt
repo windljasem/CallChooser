@@ -51,22 +51,22 @@ class MainActivity : ComponentActivity() {
                     query = it
                     normalized = normalizeNumber(it)
 
-                    if (normalized.length >= 3) {
+                    if (it.length >= 2) {
                         scope.launch {
-                            results = searchContactsAsync(normalized)
+                            results = searchContactsAsync(it)
                         }
                     } else {
                         results = emptyList()
                     }
                 },
-                label = { Text("Номер або імʼя") },
+                label = { Text("Імʼя або номер") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Нормалізований: $normalized",
+                text = "Нормалізований номер: $normalized",
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -92,15 +92,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun normalizeNumber(input: String): String {
-        // лишаємо тільки цифри
         var digits = input.filter { it.isDigit() }
 
-        // Україна: якщо 0xxxxxxxxx → 380xxxxxxxx
+        // Україна
         if (digits.startsWith("0") && digits.length == 10) {
             digits = "38$digits"
         }
 
-        // якщо почали вводити +380...
         if (digits.startsWith("380") && digits.length > 12) {
             digits = digits.take(12)
         }
@@ -118,8 +116,8 @@ class MainActivity : ComponentActivity() {
                     ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                     ContactsContract.CommonDataKinds.Phone.NUMBER
                 ),
-                "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
-                arrayOf("%$q%"),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
+                arrayOf("%$q%", "%$q%"),
                 null
             )
 
