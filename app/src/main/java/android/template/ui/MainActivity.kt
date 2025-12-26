@@ -16,6 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
@@ -37,13 +40,21 @@ class MainActivity : ComponentActivity() {
     fun CallChooserScreen() {
         var query by remember { mutableStateOf("") }
         var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
+        val scope = rememberCoroutineScope()
 
         Column(Modifier.padding(16.dp)) {
             OutlinedTextField(
                 value = query,
                 onValueChange = {
                     query = it
-                    results = searchContacts(it)
+
+                    if (it.length >= 2) {
+                        scope.launch {
+                            results = searchContactsAsync(it)
+                        }
+                    } else {
+                        results = emptyList()
+                    }
                 },
                 label = { Text("Номер або імʼя") },
                 modifier = Modifier.fillMaxWidth()
@@ -67,30 +78,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun searchContacts(q: String): List<Pair<String, String>> {
-        if (q.length < 2) return emptyList()
+    private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
+        return withContext(Dispatchers.IO) {
+            val list = mutableListOf<Pair<String, String>>()
 
-        val list = mutableListOf<Pair<String, String>>()
-        val cursor: Cursor? = contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            null,
-            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
-            arrayOf("%$q%", "%$q%"),
-            null
-        )
+            val cursor: Cursor? = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                ),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
+                arrayOf("%$q%", "%$q%"),
+                null
+            )
 
-        cursor?.use {
-            while (it.moveToNext()) {
-                val name = it.getString(
-                    it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                )
-                val number = it.getString(
-                    it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                )
-                list.add(name to number)
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(0)
+                    val number = it.getString(1)
+                    list.add(name to number)
+                }
             }
-        }
 
-        return list
+            list
+        }
     }
 }
