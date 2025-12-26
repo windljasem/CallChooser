@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
         var query by remember { mutableStateOf("") }
         var normalized by remember { mutableStateOf("") }
         var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
+        var showSheet by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -63,51 +64,29 @@ class MainActivity : ComponentActivity() {
                 Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(12.dp))
 
- // ===== BOTTOM SHEET CALL UI =====
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = {
+                                query = it
+                                normalized = normalizeNumber(it)
 
-var showSheet by remember { mutableStateOf(false) }
-
-Button(
-    onClick = { showSheet = true },
-    modifier = Modifier
-        .fillMaxWidth()
-        .height(56.dp),
-    shape = MaterialTheme.shapes.large
-) {
-    Text("Call", style = MaterialTheme.typography.titleMedium)
-}
-
-if (showSheet) {
-    ModalBottomSheet(
-        onDismissRequest = { showSheet = false }
-    ) {
-        Column(Modifier.padding(16.dp)) {
-
-            Text("Оберіть спосіб", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(12.dp))
-
-            BottomItem("📞  GSM") {
-                showSheet = false
-                openGsm(normalized)
-            }
-
-            BottomItem("✈️  Telegram") {
-                showSheet = false
-                openTelegram(normalized)
-            }
-
-            BottomItem("🟢  WhatsApp") {
-                showSheet = false
-                openWhatsApp(normalized)
-            }
-
-            BottomItem("🟣  Viber") {
-                showSheet = false
-                openViber(normalized)
-            }
-        }
-    }
-}
+                                if (it.length >= 2) {
+                                    scope.launch {
+                                        results = searchContactsAsync(it)
+                                    }
+                                } else {
+                                    results = emptyList()
+                                }
+                            },
+                            label = { Text("Імʼя або номер") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -141,32 +120,41 @@ if (showSheet) {
 
                 Spacer(Modifier.height(8.dp))
 
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
+                Button(
+                    onClick = { showSheet = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text("Call", style = MaterialTheme.typography.titleMedium)
+                }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(onClick = { openGsm(normalized) }, modifier = Modifier.weight(1f)) {
-                                Text("GSM")
-                            }
-                            Button(onClick = { openWhatsApp(normalized) }, modifier = Modifier.weight(1f)) {
-                                Text("WhatsApp")
-                            }
-                        }
+                if (showSheet) {
+                    ModalBottomSheet(onDismissRequest = { showSheet = false }) {
+                        Column(Modifier.padding(16.dp)) {
 
-                        Spacer(Modifier.height(8.dp))
+                            Text("Оберіть спосіб", style = MaterialTheme.typography.titleLarge)
+                            Spacer(Modifier.height(12.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(onClick = { openTelegram(normalized) }, modifier = Modifier.weight(1f)) {
-                                Text("Telegram")
+                            BottomItem("📞  GSM") {
+                                showSheet = false
+                                openGsm(normalized)
                             }
-                            Button(onClick = { openViber(normalized) }, modifier = Modifier.weight(1f)) {
-                                Text("Viber")
+
+                            BottomItem("✈️  Telegram") {
+                                showSheet = false
+                                openTelegram(normalized)
+                            }
+
+                            BottomItem("🟢  WhatsApp") {
+                                showSheet = false
+                                openWhatsApp(normalized)
+                            }
+
+                            BottomItem("🟣  Viber") {
+                                showSheet = false
+                                openViber(normalized)
                             }
                         }
                     }
@@ -174,19 +162,20 @@ if (showSheet) {
             }
         }
     }
-// ===== BOTTOM SHEET ITEM =====
 
-@Composable
-fun BottomItem(title: String, action: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { action() }
-            .padding(14.dp)
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+    // ================= BOTTOM ITEM =================
+
+    @Composable
+    fun BottomItem(title: String, action: () -> Unit) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { action() }
+                .padding(14.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        }
     }
-}
 
     // ================= ACTIONS =================
 
