@@ -34,9 +34,13 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            CallChooserUI()
-        }
+    val dark = isSystemInDarkTheme()
+    MaterialTheme(
+        colorScheme = if (dark) darkColorScheme() else lightColorScheme()
+    ) {
+        CallChooserUI()
     }
+}
 
 @Composable
 fun CallChooserUI() {
