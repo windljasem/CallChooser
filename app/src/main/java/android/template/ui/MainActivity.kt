@@ -10,11 +10,13 @@ import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -34,9 +36,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme()
-            ) {
+            MaterialTheme(colorScheme = darkColorScheme()) {
                 CallChooserUI()
             }
         }
@@ -44,115 +44,114 @@ class MainActivity : ComponentActivity() {
 
     // ================= UI =================
 
-@Composable
-fun CallChooserUI() {
-    var query by remember { mutableStateOf("") }
-    var normalized by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
-    val scope = rememberCoroutineScope()
+    @Composable
+    fun CallChooserUI() {
+        var query by remember { mutableStateOf("") }
+        var normalized by remember { mutableStateOf("") }
+        var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
+        val scope = rememberCoroutineScope()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-        // ===== CONTENT =====
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 120.dp)   // місце під кнопки
+                .padding(16.dp)
         ) {
 
-            Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
+            // ===== MAIN CONTENT =====
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 140.dp)
+            ) {
 
-            Spacer(Modifier.height(12.dp))
+                Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
 
-            OutlinedTextField(
-                value = query,
-                onValueChange = {
-                    query = it
-                    normalized = normalizeNumber(it)
+                Spacer(Modifier.height(12.dp))
 
-                    if (it.length >= 2) {
-                        scope.launch {
-                            results = searchContactsAsync(it)
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        normalized = normalizeNumber(it)
+
+                        if (it.length >= 2) {
+                            scope.launch {
+                                results = searchContactsAsync(it)
+                            }
+                        } else {
+                            results = emptyList()
                         }
-                    } else {
-                        results = emptyList()
+                    },
+                    label = { Text("Імʼя або номер") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
+
+                Spacer(Modifier.height(8.dp))
+
+                if (results.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(results) { item ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        query = item.second
+                                        normalized = normalizeNumber(item.second)
+                                        results = emptyList()
+                                    }
+                                    .padding(12.dp)
+                            ) {
+                                Text(item.first)
+                                Text(item.second, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
-                },
-                label = { Text("Імʼя або номер") },
-                modifier = Modifier.fillMaxWidth()
-            )
+                }
+            }
 
-            Spacer(Modifier.height(6.dp))
+            // ===== FLOATING BUTTON BAR =====
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .imePadding()
+                    .navigationBarsPadding()
+            ) {
 
-            Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
-
-            Spacer(Modifier.height(8.dp))
-
-            if (results.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(results) { item ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    query = item.second
-                                    normalized = normalizeNumber(item.second)
-                                    results = emptyList()
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Text(item.first)
-                            Text(item.second, style = MaterialTheme.typography.bodySmall)
-                        }
+                    Button(onClick = { openGsm(normalized) }, modifier = Modifier.weight(1f)) {
+                        Text("GSM")
+                    }
+                    Button(onClick = { openTelegram(normalized) }, modifier = Modifier.weight(1f)) {
+                        Text("Telegram")
                     }
                 }
-            }
-        }
 
-        // ===== FLOATING BOTTOM BAR =====
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .imePadding()                 // клавіатура
-                .navigationBarsPadding()     // системні кнопки
-                .padding(bottom = 8.dp)
-        ) {
+                Spacer(Modifier.height(8.dp))
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(onClick = { openGsm(normalized) }, modifier = Modifier.weight(1f)) {
-                    Text("GSM")
-                }
-                Button(onClick = { openTelegram(normalized) }, modifier = Modifier.weight(1f)) {
-                    Text("Telegram")
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(onClick = { openWhatsApp(normalized) }, modifier = Modifier.weight(1f)) {
-                    Text("WhatsApp")
-                }
-                Button(onClick = { openViber(normalized) }, modifier = Modifier.weight(1f)) {
-                    Text("Viber")
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(onClick = { openWhatsApp(normalized) }, modifier = Modifier.weight(1f)) {
+                        Text("WhatsApp")
+                    }
+                    Button(onClick = { openViber(normalized) }, modifier = Modifier.weight(1f)) {
+                        Text("Viber")
+                    }
                 }
             }
         }
     }
-}
 
     // ================= ACTIONS =================
 
@@ -216,9 +215,12 @@ fun CallChooserUI() {
 
             cursor?.use {
                 while (it.moveToNext()) {
-                    list.add(it.getString(0) to it.getString(1))
+                    val name = it.getString(0)
+                    val number = it.getString(1)
+                    list.add(name to number)
                 }
             }
+
             list
         }
     }
