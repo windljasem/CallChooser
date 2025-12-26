@@ -39,18 +39,21 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun CallChooserScreen() {
         var query by remember { mutableStateOf("") }
+        var normalized by remember { mutableStateOf("") }
         var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
         val scope = rememberCoroutineScope()
 
         Column(Modifier.padding(16.dp)) {
+
             OutlinedTextField(
                 value = query,
                 onValueChange = {
                     query = it
+                    normalized = normalizeNumber(it)
 
-                    if (it.length >= 2) {
+                    if (normalized.length >= 3) {
                         scope.launch {
-                            results = searchContactsAsync(it)
+                            results = searchContactsAsync(normalized)
                         }
                     } else {
                         results = emptyList()
@@ -60,14 +63,24 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Нормалізований: $normalized",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             LazyColumn {
                 items(results) { item ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { query = item.second }
+                            .clickable {
+                                query = item.second
+                                normalized = normalizeNumber(item.second)
+                            }
                             .padding(12.dp)
                     ) {
                         Text(item.first)
@@ -76,6 +89,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun normalizeNumber(input: String): String {
+        // лишаємо тільки цифри
+        var digits = input.filter { it.isDigit() }
+
+        // Україна: якщо 0xxxxxxxxx → 380xxxxxxxx
+        if (digits.startsWith("0") && digits.length == 10) {
+            digits = "38$digits"
+        }
+
+        // якщо почали вводити +380...
+        if (digits.startsWith("380") && digits.length > 12) {
+            digits = digits.take(12)
+        }
+
+        return digits
     }
 
     private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
@@ -88,8 +118,8 @@ class MainActivity : ComponentActivity() {
                     ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                     ContactsContract.CommonDataKinds.Phone.NUMBER
                 ),
-                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
-                arrayOf("%$q%", "%$q%"),
+                "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
+                arrayOf("%$q%"),
                 null
             )
 
