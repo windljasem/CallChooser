@@ -44,17 +44,24 @@ class MainActivity : ComponentActivity() {
 
     // ================= UI =================
 
-    @Composable
-    fun CallChooserUI() {
-        var query by remember { mutableStateOf("") }
-        var normalized by remember { mutableStateOf("") }
-        var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
-        val scope = rememberCoroutineScope()
+@Composable
+fun CallChooserUI() {
+    var query by remember { mutableStateOf("") }
+    var normalized by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
+    val scope = rememberCoroutineScope()
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        // ===== CONTENT =====
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(bottom = 120.dp)   // місце під кнопки
         ) {
 
             Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
@@ -87,9 +94,7 @@ class MainActivity : ComponentActivity() {
 
             if (results.isNotEmpty()) {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(results) { item ->
                         Column(
@@ -107,15 +112,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            } else {
-                Spacer(Modifier.weight(1f))
             }
+        }
 
-            Spacer(Modifier.height(8.dp))
+        // ===== FLOATING BOTTOM BAR =====
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .imePadding()                 // клавіатура
+                .navigationBarsPadding()     // системні кнопки
+                .padding(bottom = 8.dp)
+        ) {
 
-            // ===== Buttons =====
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(onClick = { openGsm(normalized) }, modifier = Modifier.weight(1f)) {
                     Text("GSM")
                 }
@@ -126,7 +139,10 @@ class MainActivity : ComponentActivity() {
 
             Spacer(Modifier.height(8.dp))
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(onClick = { openWhatsApp(normalized) }, modifier = Modifier.weight(1f)) {
                     Text("WhatsApp")
                 }
@@ -136,6 +152,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 
     // ================= ACTIONS =================
 
