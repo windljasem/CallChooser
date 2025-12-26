@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -16,7 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
@@ -44,8 +47,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= UI =================
-
     @Composable
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
@@ -54,63 +55,50 @@ class MainActivity : ComponentActivity() {
         var showSheet by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
 
                 Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(12.dp))
 
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = {
-                                query = it
-                                normalized = normalizeNumber(it)
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        normalized = normalizeNumber(it)
 
-                                if (it.length >= 2) {
-                                    scope.launch {
-                                        results = searchContactsAsync(it)
-                                    }
-                                } else {
-                                    results = emptyList()
-                                }
-                            },
-                            label = { Text("Імʼя або номер") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+                        if (it.length >= 2) {
+                            scope.launch {
+                                results = searchContactsAsync(it)
+                            }
+                        } else {
+                            results = emptyList()
+                        }
+                    },
+                    label = { Text("Імʼя або номер") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(6.dp))
+                Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
 
                 Spacer(Modifier.height(8.dp))
 
                 if (results.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        LazyColumn {
-                            items(results) { item ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            query = item.second
-                                            normalized = normalizeNumber(item.second)
-                                            results = emptyList()
-                                        }
-                                        .padding(12.dp)
-                                ) {
-                                    Text(item.first)
-                                    Text(item.second, style = MaterialTheme.typography.bodySmall)
-                                }
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(results) { item ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        query = item.second
+                                        normalized = normalizeNumber(item.second)
+                                        results = emptyList()
+                                    }
+                                    .padding(12.dp)
+                            ) {
+                                Text(item.first)
+                                Text(item.second, style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -118,52 +106,40 @@ class MainActivity : ComponentActivity() {
                     Spacer(Modifier.weight(1f))
                 }
 
-                Spacer(Modifier.height(8.dp))
-
                 Button(
                     onClick = { showSheet = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.large
+                        .height(56.dp)
                 ) {
-                    Text("Call", style = MaterialTheme.typography.titleMedium)
+                    Text("Call")
                 }
+            }
 
-                if (showSheet) {
-                    ModalBottomSheet(onDismissRequest = { showSheet = false }) {
-                        Column(Modifier.padding(16.dp)) {
+            // ===== SIMPLE BOTTOM SHEET =====
+            if (showSheet) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0x88000000))
+                        .clickable { showSheet = false }
+                )
 
-                            Text("Оберіть спосіб", style = MaterialTheme.typography.titleLarge)
-                            Spacer(Modifier.height(12.dp))
-
-                            BottomItem("📞  GSM") {
-                                showSheet = false
-                                openGsm(normalized)
-                            }
-
-                            BottomItem("✈️  Telegram") {
-                                showSheet = false
-                                openTelegram(normalized)
-                            }
-
-                            BottomItem("🟢  WhatsApp") {
-                                showSheet = false
-                                openWhatsApp(normalized)
-                            }
-
-                            BottomItem("🟣  Viber") {
-                                showSheet = false
-                                openViber(normalized)
-                            }
-                        }
-                    }
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp)
+                ) {
+                    BottomItem("📞 GSM") { showSheet = false; openGsm(normalized) }
+                    BottomItem("✈️ Telegram") { showSheet = false; openTelegram(normalized) }
+                    BottomItem("🟢 WhatsApp") { showSheet = false; openWhatsApp(normalized) }
+                    BottomItem("🟣 Viber") { showSheet = false; openViber(normalized) }
                 }
             }
         }
     }
-
-    // ================= BOTTOM ITEM =================
 
     @Composable
     fun BottomItem(title: String, action: () -> Unit) {
@@ -177,7 +153,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= ACTIONS =================
+    // ===== ACTIONS =====
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
@@ -206,26 +182,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= UTILS =================
+    // ===== UTILS =====
 
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
-
-        if (digits.startsWith("0") && digits.length == 10) {
-            digits = "38$digits"
-        }
-
-        if (digits.startsWith("380") && digits.length > 12) {
-            digits = digits.take(12)
-        }
-
+        if (digits.startsWith("0") && digits.length == 10) digits = "38$digits"
+        if (digits.startsWith("380") && digits.length > 12) digits = digits.take(12)
         return digits
     }
 
     private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
         return withContext(Dispatchers.IO) {
             val list = mutableListOf<Pair<String, String>>()
-
             val cursor: Cursor? = contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
@@ -236,12 +204,9 @@ class MainActivity : ComponentActivity() {
                 arrayOf("%$q%", "%$q%"),
                 null
             )
-
             cursor?.use {
                 while (it.moveToNext()) {
-                    val name = it.getString(0)
-                    val number = it.getString(1)
-                    list.add(name to number)
+                    list.add(it.getString(0) to it.getString(1))
                 }
             }
             list
