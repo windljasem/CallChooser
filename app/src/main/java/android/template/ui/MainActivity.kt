@@ -38,79 +38,134 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    fun CallChooserUI() {
-        var query by remember { mutableStateOf("") }
-        var normalized by remember { mutableStateOf("") }
-        var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
-        val scope = rememberCoroutineScope()
+@Composable
+fun CallChooserUI() {
+    var query by remember { mutableStateOf("") }
+    var normalized by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
+    val scope = rememberCoroutineScope()
 
+    Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
 
-            Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
-
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = {
-                    query = it
-                    normalized = normalizeNumber(it)
-
-                    if (it.length >= 2) {
-                        scope.launch {
-                            results = searchContactsAsync(it)
-                        }
-                    } else {
-                        results = emptyList()
-                    }
-                },
-                label = { Text("Імʼя або номер") },
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                "CallChooser",
+                style = MaterialTheme.typography.headlineMedium
             )
 
-            Spacer(Modifier.height(6.dp))
-            Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(12.dp))
 
-            Spacer(Modifier.height(8.dp))
-
-            LazyColumn(
-                modifier = Modifier.weight(1f, fill = false)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(6.dp)
             ) {
-                items(results) { item ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                query = item.second
-                                normalized = normalizeNumber(item.second)
-                                results = emptyList()   // 🔥 ховаємо список
+                Column(Modifier.padding(12.dp)) {
+
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = {
+                            query = it
+                            normalized = normalizeNumber(it)
+
+                            if (it.length >= 2) {
+                                scope.launch {
+                                    results = searchContactsAsync(it)
+                                }
+                            } else {
+                                results = emptyList()
                             }
-                            .padding(10.dp)
-                    ) {
-                        Text(item.first)
-                        Text(item.second, style = MaterialTheme.typography.bodySmall)
+                        },
+                        label = { Text("Імʼя або номер") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Text(
+                        text = "Номер: $normalized",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            if (results.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    LazyColumn {
+                        items(results) { item ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        query = item.second
+                                        normalized = normalizeNumber(item.second)
+                                        results = emptyList()
+                                    }
+                                    .padding(12.dp)
+                            ) {
+                                Text(item.first)
+                                Text(item.second, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                 }
+            } else {
+                Spacer(Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(12.dp))
 
-            Row(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                elevation = CardDefaults.cardElevation(6.dp)
             ) {
-                Button(onClick = { openGsm(normalized) }) { Text("GSM") }
-                Button(onClick = { openWhatsApp(normalized) }) { Text("WhatsApp") }
-                Button(onClick = { openTelegram(normalized) }) { Text("Telegram") }
-                Button(onClick = { openViber(normalized) }) { Text("Viber") }
+                Column(Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { openGsm(normalized) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("GSM") }
+
+                        Button(
+                            onClick = { openWhatsApp(normalized) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("WhatsApp") }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { openTelegram(normalized) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Telegram") }
+
+                        Button(
+                            onClick = { openViber(normalized) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Viber") }
+                    }
+                }
             }
         }
     }
+}
 
     // ====== ACTIONS ======
 
