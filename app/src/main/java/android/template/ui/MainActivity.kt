@@ -63,31 +63,51 @@ class MainActivity : ComponentActivity() {
                 Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(12.dp))
 
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
+ // ===== BOTTOM SHEET CALL UI =====
 
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = {
-                                query = it
-                                normalized = normalizeNumber(it)
+var showSheet by remember { mutableStateOf(false) }
 
-                                if (it.length >= 2) {
-                                    scope.launch {
-                                        results = searchContactsAsync(it)
-                                    }
-                                } else {
-                                    results = emptyList()
-                                }
-                            },
-                            label = { Text("Імʼя або номер") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+Button(
+    onClick = { showSheet = true },
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(56.dp),
+    shape = MaterialTheme.shapes.large
+) {
+    Text("Call", style = MaterialTheme.typography.titleMedium)
+}
 
-                        Spacer(Modifier.height(6.dp))
-                        Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+if (showSheet) {
+    ModalBottomSheet(
+        onDismissRequest = { showSheet = false }
+    ) {
+        Column(Modifier.padding(16.dp)) {
+
+            Text("Оберіть спосіб", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+
+            BottomItem("📞  GSM") {
+                showSheet = false
+                openGsm(normalized)
+            }
+
+            BottomItem("✈️  Telegram") {
+                showSheet = false
+                openTelegram(normalized)
+            }
+
+            BottomItem("🟢  WhatsApp") {
+                showSheet = false
+                openWhatsApp(normalized)
+            }
+
+            BottomItem("🟣  Viber") {
+                showSheet = false
+                openViber(normalized)
+            }
+        }
+    }
+}
 
                 Spacer(Modifier.height(8.dp))
 
@@ -154,6 +174,19 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+// ===== BOTTOM SHEET ITEM =====
+
+@Composable
+fun BottomItem(title: String, action: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { action() }
+            .padding(14.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+    }
+}
 
     // ================= ACTIONS =================
 
