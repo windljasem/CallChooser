@@ -9,20 +9,17 @@ import android.os.Bundle
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,14 +37,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val colors = lightColorScheme(
-                primary = Color(0xFF5B6CFF),
-                background = Color(0xFFF7F8FF),
-                surface = Color.White,
-                onSurface = Color(0xFF1E1E1E)
-            )
-
-            MaterialTheme(colorScheme = colors) {
+            MaterialTheme(colorScheme = darkColorScheme()) {
                 CallChooserUI()
             }
         }
@@ -65,17 +55,17 @@ class MainActivity : ComponentActivity() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF7F8FF))
                 .padding(16.dp)
         ) {
 
+            // ===== MAIN CONTENT =====
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 150.dp)
+                    .padding(bottom = 140.dp)
             ) {
 
-                Text("CallChooser", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
 
                 Spacer(Modifier.height(12.dp))
 
@@ -99,12 +89,14 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(Modifier.height(6.dp))
 
-                Text("Номер: $normalized", fontSize = 12.sp)
+                Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
 
                 Spacer(Modifier.height(8.dp))
 
                 if (results.isNotEmpty()) {
-                    LazyColumn {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
                         items(results) { item ->
                             Column(
                                 modifier = Modifier
@@ -116,8 +108,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                     .padding(12.dp)
                             ) {
-                                Text(item.first, fontWeight = FontWeight.Medium)
-                                Text(item.second, fontSize = 12.sp)
+                                Text(item.first)
+                                Text(item.second, style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -125,7 +117,6 @@ class MainActivity : ComponentActivity() {
             }
 
             // ===== FLOATING BUTTON BAR =====
-
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -156,30 +147,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= BUTTON =================
+    // ================= CUSTOM BUTTON =================
 
     @Composable
     fun StyledButton(text: String, onClick: () -> Unit) {
-        Surface(
+        Button(
+            onClick = onClick,
             modifier = Modifier
                 .height(56.dp)
                 .weight(1f),
-            color = Color(0xFFE8E6FF),
-            shape = RoundedCornerShape(28.dp),
-            shadowElevation = 6.dp,
-            onClick = onClick
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFE8E6FF),
+                contentColor = Color(0xFF4C5DFF)
+            ),
+            shape = MaterialTheme.shapes.large
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = text,
-                    color = Color(0xFF4C5DFF),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            Text(text)
         }
     }
 
