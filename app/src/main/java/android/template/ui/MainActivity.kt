@@ -126,8 +126,8 @@ class MainActivity : ComponentActivity() {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StyledButton("GSM") { openGsm(normalized) }
-                    StyledButton("Telegram") { openTelegram(normalized) }
+                    StyledButton("GSM", 0.5f) { openGsm(normalized) }
+                    StyledButton("Telegram", 0.5f) { openTelegram(normalized) }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -136,20 +136,20 @@ class MainActivity : ComponentActivity() {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StyledButton("WhatsApp") { openWhatsApp(normalized) }
-                    StyledButton("Viber") { openViber(normalized) }
+                    StyledButton("WhatsApp", 0.5f) { openWhatsApp(normalized) }
+                    StyledButton("Viber", 0.5f) { openViber(normalized) }
                 }
             }
         }
     }
 
     @Composable
-    fun StyledButton(text: String, onClick: () -> Unit) {
+    fun StyledButton(text: String, widthFraction: Float, onClick: () -> Unit) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .height(56.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth(widthFraction),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFE8E6FF),
                 contentColor = Color(0xFF4C5DFF)
