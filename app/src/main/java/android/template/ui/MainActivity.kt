@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,18 +66,20 @@ class MainActivity : ComponentActivity() {
                     .padding(bottom = 160.dp)
             ) {
 
-                Text("CallChooser", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                BasicText(
+                    "CallChooser",
+                    style = TextStyle(color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                )
 
                 Spacer(Modifier.height(12.dp))
 
-                // ===== SEARCH FIELD =====
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF3A6F97), RoundedCornerShape(12.dp))
                         .padding(12.dp)
                 ) {
-                    androidx.compose.foundation.text.BasicTextField(
+                    BasicTextField(
                         value = query,
                         onValueChange = {
                             query = it
@@ -83,19 +88,14 @@ class MainActivity : ComponentActivity() {
                                 scope.launch { results = searchContactsAsync(it) }
                             } else results = emptyList()
                         },
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
+                        textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     if (query.isNotEmpty()) {
-                        Text(
+                        BasicText(
                             "✕",
-                            color = Color.White,
-                            fontSize = 20.sp,
+                            style = TextStyle(color = Color.White, fontSize = 20.sp),
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .clickable {
@@ -122,15 +122,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                     .padding(12.dp)
                             ) {
-                                Text(item.first, color = Color.White)
-                                Text(item.second, color = Color.White, fontSize = 12.sp)
+                                BasicText(item.first, style = TextStyle(color = Color.White))
+                                BasicText(item.second, style = TextStyle(color = Color.White, fontSize = 12.sp))
                             }
                         }
                     }
                 }
             }
 
-            // ===== FLOATING BUTTON BAR =====
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -161,7 +160,7 @@ class MainActivity : ComponentActivity() {
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
-            Text(text, color = textColor, fontWeight = FontWeight.SemiBold)
+            BasicText(text, style = TextStyle(color = textColor, fontWeight = FontWeight.SemiBold))
         }
     }
 
