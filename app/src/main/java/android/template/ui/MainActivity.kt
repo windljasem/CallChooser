@@ -168,41 +168,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    fun BrandButton(text: String, textColor: Color, bgColor: Color, onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = bgColor,
-                contentColor = textColor,
-                disabledContainerColor = bgColor,
-                disabledContentColor = textColor
-            )
-        ) {
-            Text(text, fontWeight = FontWeight.SemiBold)
+@Composable
+fun BrandButton(text: String, textColor: Color, bgColor: Color, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = bgColor,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text, color = textColor, fontWeight = FontWeight.SemiBold)
         }
     }
+}
 
-    @Composable
-    fun GsmButton(onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFF0F0F0),
-                contentColor = Color.Black,
-                disabledContainerColor = Color(0xFFF0F0F0),
-                disabledContentColor = Color.Black
-            )
-        ) {
-            Text("GSM", fontWeight = FontWeight.SemiBold)
+@Composable
+fun GsmButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = Color(0xFFF0F0F0),
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("GSM", color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
     }
+}
 
     // ================= ACTIONS =================
 
