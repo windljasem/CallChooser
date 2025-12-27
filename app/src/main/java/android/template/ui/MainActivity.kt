@@ -10,7 +10,6 @@ import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,8 +42,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= UI =================
-
     @Composable
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
@@ -58,7 +55,6 @@ class MainActivity : ComponentActivity() {
                 .padding(16.dp)
         ) {
 
-            // ===== MAIN CONTENT =====
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -147,20 +143,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= CUSTOM BUTTON =================
-
     @Composable
     fun StyledButton(text: String, onClick: () -> Unit) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .height(56.dp)
-                .weight(1f),
+                .fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFE8E6FF),
                 contentColor = Color(0xFF4C5DFF)
-            ),
-            shape = MaterialTheme.shapes.large
+            )
         ) {
             Text(text)
         }
