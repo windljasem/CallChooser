@@ -18,7 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,14 +82,32 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     label = { Text("Імʼя або номер") },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = {
+                                query = ""
+                                normalized = ""
+                                results = emptyList()
+                            }) {
+                                Text("✕", fontSize = 18.sp)
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(6.dp))
-
-                Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
-
                 Spacer(Modifier.height(8.dp))
+
+                if (normalized.isNotBlank()) {
+                    Text(
+                        text = normalized.chunked(3).joinToString(" "),
+                        color = Color(0xFF4C5DFF),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
 
                 if (results.isNotEmpty()) {
                     LazyColumn {
