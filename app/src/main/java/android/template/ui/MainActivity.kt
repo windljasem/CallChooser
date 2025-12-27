@@ -82,6 +82,11 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     label = { Text("Імʼя або номер") },
+                    textStyle = LocalTextStyle.current.copy(
+                        color = if (normalized.isNotBlank()) Color(0xFF4C5DFF) else Color.Unspecified,
+                        fontSize = 18.sp,
+                        fontWeight = if (normalized.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
+                    ),
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = {
@@ -95,17 +100,6 @@ class MainActivity : ComponentActivity() {
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(Modifier.height(8.dp))
-
-                if (normalized.isNotBlank()) {
-                    Text(
-                        text = normalized.chunked(3).joinToString(" "),
-                        color = Color(0xFF4C5DFF),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
 
                 Spacer(Modifier.height(12.dp))
 
