@@ -89,9 +89,9 @@ class MainActivity : ComponentActivity() {
                     },
                     label = { Text("Імʼя або номер") },
                     textStyle = LocalTextStyle.current.copy(
-                        color = if (normalized.isNotBlank()) Color(0xFF4C5DFF) else Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = if (normalized.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Normal
                     ),
                     trailingIcon = {
                         if (query.isNotEmpty()) {
