@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -143,10 +142,10 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        IconButtonStyled("GSM", R.drawable.ic_gsm) { openGsm(normalized) }
+                        BrandButton("", Color.Black, Color(0xFFF0F0F0)) { openGsm(normalized) }
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        IconButtonStyled("Telegram", R.drawable.ic_telegram) { openTelegram(normalized) }
+                        BrandButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) { openTelegram(normalized) }
                     }
                 }
 
@@ -154,10 +153,10 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        IconButtonStyled("WhatsApp", R.drawable.ic_whatsapp) { openWhatsApp(normalized) }
+                        BrandButton("WhatsApp", Color(0xFF25D366), Color(0xFFE9F9EF)) { openWhatsApp(normalized) }
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        IconButtonStyled("Viber", R.drawable.ic_viber) { openViber(normalized) }
+                        BrandButton("Viber", Color(0xFF7360F2), Color(0xFFF0EDFF)) { openViber(normalized) }
                     }
                 }
             }
@@ -165,29 +164,92 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun IconButtonStyled(text: String, icon: Int, onClick: () -> Unit) {
+    fun BrandButton(text: String, textColor: Color, bgColor: Color, onClick: () -> Unit) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE8E6FF),
-                contentColor = Color(0xFF4C5DFF)
+                containerColor = bgColor,
+                contentColor = textColor
             )
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(icon),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(text)
+            if (text.isNotEmpty()) {
+                Text(text, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 
-    // ===== actions & utils залишились без змін =====
+    // ================= ACTIONS =================
+
+    private fun openGsm(num: String) {
+        if (num.isBlank()) return
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
+    }
+
+    private fun openWhatsApp(num: String) {
+        openAppOrFallback(Uri.parse("https://wa.me/$num"), "com.whatsapp", num)
+    }
+
+    private fun openTelegram(num: String) {
+        openAppOrFallback(Uri.parse("tg://resolve?phone=$num"), "org.telegram.messenger", num)
+    }
+
+    private fun openViber(num: String) {
+        openAppOrFallback(Uri.parse("viber://chat?number=$num"), "com.viber.voip", num)
+    }
+
+    private fun openAppOrFallback(uri: Uri, pkg: String, num: String) {
+        try {
+            val i = Intent(Intent.ACTION_VIEW, uri)
+            i.setPackage(pkg)
+            startActivity(i)
+        } catch (e: Exception) {
+            openGsm(num)
+        }
+    }
+
+    // ================= UTILS =================
+
+    private fun normalizeNumber(input: String): String {
+        var digits = input.filter { it.isDigit() }
+
+        if (digits.startsWith("0") && digits.length == 10) {
+            digits = "38$digits"
+        }
+
+        if (digits.startsWith("380") && digits.length > 12) {
+            digits = digits.take(12)
+        }
+
+        return digits
+    }
+
+    private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
+        return withContext(Dispatchers.IO) {
+            val list = mutableListOf<Pair<String, String>>()
+
+            val cursor: Cursor? = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                ),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
+                arrayOf("%$q%", "%$q%"),
+                null
+            )
+
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(0)
+                    val number = it.getString(1)
+                    list.add(name to number)
+                }
+            }
+
+            list
+        }
+    }
 }
