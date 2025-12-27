@@ -14,7 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,13 +39,9 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                CallChooserUI()
-            }
+            CallChooserUI()
         }
     }
-
-    // ================= UI =================
 
     @Composable
     fun CallChooserUI() {
@@ -64,47 +60,52 @@ class MainActivity : ComponentActivity() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 150.dp)
+                    .padding(bottom = 160.dp)
             ) {
 
-                Text(
-                    "CallChooser",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White
-                )
+                Text("CallChooser", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
 
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = {
-                        query = it
-                        normalized = normalizeNumber(it)
-                        if (it.length >= 2) {
-                            scope.launch { results = searchContactsAsync(it) }
-                        } else {
-                            results = emptyList()
-                        }
-                    },
-                    label = { Text("Імʼя або номер", color = Color.White) },
-                    textStyle = LocalTextStyle.current.copy(
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = {
-                                query = ""
-                                normalized = ""
-                                results = emptyList()
-                            }) {
-                                Text("✕", color = Color.White)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // ===== SEARCH FIELD =====
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF3A6F97), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = query,
+                        onValueChange = {
+                            query = it
+                            normalized = normalizeNumber(it)
+                            if (it.length >= 2) {
+                                scope.launch { results = searchContactsAsync(it) }
+                            } else results = emptyList()
+                        },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (query.isNotEmpty()) {
+                        Text(
+                            "✕",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .clickable {
+                                    query = ""
+                                    normalized = ""
+                                    results = emptyList()
+                                }
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(12.dp))
 
@@ -134,73 +135,37 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(12.dp)
-                    .imePadding()
-                    .navigationBarsPadding()
             ) {
 
                 Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        GsmButton { openGsm(normalized) }
-                    }
-                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        BrandButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) {
-                            openTelegram(normalized)
-                        }
-                    }
+                    ActionButton("GSM", Color.Black, Color(0xFFF0F0F0)) { openGsm(normalized) }
+                    ActionButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) { openTelegram(normalized) }
                 }
 
-                Spacer(Modifier.height(12.dp))
-
                 Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        BrandButton("WhatsApp", Color(0xFF25D366), Color(0xFFE9F9EF)) {
-                            openWhatsApp(normalized)
-                        }
-                    }
-                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        BrandButton("Viber", Color(0xFF7360F2), Color(0xFFF0EDFF)) {
-                            openViber(normalized)
-                        }
-                    }
+                    ActionButton("WhatsApp", Color(0xFF25D366), Color(0xFFE9F9EF)) { openWhatsApp(normalized) }
+                    ActionButton("Viber", Color(0xFF7360F2), Color(0xFFF0EDFF)) { openViber(normalized) }
                 }
             }
         }
     }
 
-@Composable
-fun BrandButton(text: String, textColor: Color, bgColor: Color, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        color = bgColor,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-    ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    @Composable
+    fun ActionButton(text: String, textColor: Color, bg: Color, onClick: () -> Unit) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .padding(6.dp)
+                .height(56.dp)
+                .background(bg, RoundedCornerShape(28.dp))
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
             Text(text, color = textColor, fontWeight = FontWeight.SemiBold)
         }
     }
-}
 
-@Composable
-fun GsmButton(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        color = Color(0xFFF0F0F0),
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-    ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("GSM", color = Color.Black, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-    // ================= ACTIONS =================
+    // ===== LOGIC =====
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
@@ -229,8 +194,6 @@ fun GsmButton(onClick: () -> Unit) {
         }
     }
 
-    // ================= UTILS =================
-
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
         if (digits.startsWith("0") && digits.length == 10) digits = "38$digits"
@@ -252,9 +215,7 @@ fun GsmButton(onClick: () -> Unit) {
                 null
             )
             cursor?.use {
-                while (it.moveToNext()) {
-                    list.add(it.getString(0) to it.getString(1))
-                }
+                while (it.moveToNext()) list.add(it.getString(0) to it.getString(1))
             }
             list
         }
