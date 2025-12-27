@@ -9,16 +9,22 @@ import android.os.Bundle
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,7 +42,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            val colors = lightColorScheme(
+                primary = Color(0xFF5B6CFF),
+                background = Color(0xFFF7F8FF),
+                surface = Color.White,
+                onSurface = Color(0xFF1E1E1E)
+            )
+
+            MaterialTheme(colorScheme = colors) {
                 CallChooserUI()
             }
         }
@@ -57,14 +70,13 @@ class MainActivity : ComponentActivity() {
                 .padding(16.dp)
         ) {
 
-            // ===== MAIN CONTENT =====
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 140.dp)
+                    .padding(bottom = 150.dp)
             ) {
 
-                Text("CallChooser", style = MaterialTheme.typography.headlineMedium)
+                Text("CallChooser", fontSize = 26.sp, fontWeight = FontWeight.Bold)
 
                 Spacer(Modifier.height(12.dp))
 
@@ -88,14 +100,12 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(Modifier.height(6.dp))
 
-                Text("Номер: $normalized", style = MaterialTheme.typography.bodySmall)
+                Text("Номер: $normalized", fontSize = 12.sp)
 
                 Spacer(Modifier.height(8.dp))
 
                 if (results.isNotEmpty()) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    LazyColumn {
                         items(results) { item ->
                             Column(
                                 modifier = Modifier
@@ -107,48 +117,86 @@ class MainActivity : ComponentActivity() {
                                     }
                                     .padding(12.dp)
                             ) {
-                                Text(item.first)
-                                Text(item.second, style = MaterialTheme.typography.bodySmall)
+                                Text(item.first, fontWeight = FontWeight.Medium)
+                                Text(item.second, fontSize = 12.sp)
                             }
                         }
                     }
                 }
             }
 
-            // ===== FLOATING BUTTON BAR =====
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .padding(12.dp)
                     .imePadding()
                     .navigationBarsPadding()
             ) {
 
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(onClick = { openGsm(normalized) }, modifier = Modifier.weight(1f)) {
-                        Text("GSM")
-                    }
-                    Button(onClick = { openTelegram(normalized) }, modifier = Modifier.weight(1f)) {
-                        Text("Telegram")
-                    }
+                    MessengerButton("GSM", null) { openGsm(normalized) }
+                    MessengerButton("Telegram", R.drawable.ic_telegram) { openTelegram(normalized) }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(onClick = { openWhatsApp(normalized) }, modifier = Modifier.weight(1f)) {
-                        Text("WhatsApp")
-                    }
-                    Button(onClick = { openViber(normalized) }, modifier = Modifier.weight(1f)) {
-                        Text("Viber")
-                    }
+                    MessengerButton("WhatsApp", R.drawable.ic_whatsapp) { openWhatsApp(normalized) }
+                    MessengerButton("Viber", R.drawable.ic_viber) { openViber(normalized) }
                 }
+            }
+        }
+    }
+
+    // ================= BUTTON =================
+
+    @Composable
+    fun MessengerButton(text: String, icon: Int?, onClick: () -> Unit) {
+        Surface(
+            modifier = Modifier
+                .height(56.dp)
+                .weight(1f),
+            color = Color(0xFFE8E6FF),
+            shape = RoundedCornerShape(28.dp),
+            shadowElevation = 6.dp,
+            onClick = onClick
+        ) {
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (icon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.White, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(icon),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                }
+
+                Text(
+                    text,
+                    color = Color(0xFF4C5DFF),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
