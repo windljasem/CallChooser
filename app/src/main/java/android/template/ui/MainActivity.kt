@@ -14,14 +14,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,7 +39,9 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            CallChooserUI()
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                CallChooserUI()
+            }
         }
     }
 
@@ -56,56 +55,57 @@ class MainActivity : ComponentActivity() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF2C5E86))
+                .background(Color(0xFF2C5E86))   // 🔵 фон
                 .padding(16.dp)
         ) {
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 160.dp)
+                    .padding(bottom = 150.dp)
             ) {
 
-                BasicText(
+                Text(
                     "CallChooser",
-                    style = TextStyle(color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White
                 )
 
                 Spacer(Modifier.height(12.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF3A6F97), RoundedCornerShape(12.dp))
-                        .padding(12.dp)
-                ) {
-                    BasicTextField(
-                        value = query,
-                        onValueChange = {
-                            query = it
-                            normalized = normalizeNumber(it)
-                            if (it.length >= 2) {
-                                scope.launch { results = searchContactsAsync(it) }
-                            } else results = emptyList()
-                        },
-                        textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        normalized = normalizeNumber(it)
 
-                    if (query.isNotEmpty()) {
-                        BasicText(
-                            "✕",
-                            style = TextStyle(color = Color.White, fontSize = 20.sp),
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .clickable {
-                                    query = ""
-                                    normalized = ""
-                                    results = emptyList()
-                                }
-                        )
-                    }
-                }
+                        if (it.length >= 2) {
+                            scope.launch {
+                                results = searchContactsAsync(it)
+                            }
+                        } else {
+                            results = emptyList()
+                        }
+                    },
+                    label = { Text("Імʼя або номер") },
+                    textStyle = LocalTextStyle.current.copy(
+                        color = if (normalized.isNotBlank()) Color(0xFF4C5DFF) else Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = if (normalized.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
+                    ),
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = {
+                                query = ""
+                                normalized = ""
+                                results = emptyList()
+                            }) {
+                                Text("✕", fontSize = 18.sp)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -122,49 +122,82 @@ class MainActivity : ComponentActivity() {
                                     }
                                     .padding(12.dp)
                             ) {
-                                BasicText(item.first, style = TextStyle(color = Color.White))
-                                BasicText(item.second, style = TextStyle(color = Color.White, fontSize = 12.sp))
+                                Text(item.first, color = Color.White)
+                                Text(item.second, style = MaterialTheme.typography.bodySmall, color = Color.White)
                             }
                         }
                     }
                 }
             }
 
+            // ===== FLOATING BUTTON BAR =====
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .padding(12.dp)
+                    .imePadding()
+                    .navigationBarsPadding()
             ) {
 
                 Row(Modifier.fillMaxWidth()) {
-                    ActionButton("GSM", Color.Black, Color(0xFFF0F0F0)) { openGsm(normalized) }
-                    ActionButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) { openTelegram(normalized) }
+                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
+                        StyledButton(
+                            "GSM",
+                            bg = Color(0xFFF0F0F0),
+                            fg = Color.Black
+                        ) { openGsm(normalized) }
+                    }
+                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                        StyledButton(
+                            "Telegram",
+                            bg = Color(0xFFEAF6FD),
+                            fg = Color(0xFF229ED9)
+                        ) { openTelegram(normalized) }
+                    }
                 }
 
+                Spacer(Modifier.height(12.dp))
+
                 Row(Modifier.fillMaxWidth()) {
-                    ActionButton("WhatsApp", Color(0xFF25D366), Color(0xFFE9F9EF)) { openWhatsApp(normalized) }
-                    ActionButton("Viber", Color(0xFF7360F2), Color(0xFFF0EDFF)) { openViber(normalized) }
+                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
+                        StyledButton(
+                            "WhatsApp",
+                            bg = Color(0xFFE9F9EF),
+                            fg = Color(0xFF25D366)
+                        ) { openWhatsApp(normalized) }
+                    }
+                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                        StyledButton(
+                            "Viber",
+                            bg = Color(0xFFF0EDFF),
+                            fg = Color(0xFF7360F2)
+                        ) { openViber(normalized) }
+                    }
                 }
             }
         }
     }
 
     @Composable
-    fun ActionButton(text: String, textColor: Color, bg: Color, onClick: () -> Unit) {
-        Box(
+    fun StyledButton(text: String, bg: Color, fg: Color, onClick: () -> Unit) {
+        Button(
+            onClick = onClick,
             modifier = Modifier
-                .weight(1f)
-                .padding(6.dp)
-                .height(56.dp)
-                .background(bg, RoundedCornerShape(28.dp))
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = bg,
+                contentColor = fg,
+                disabledContainerColor = bg,
+                disabledContentColor = fg
+            )
         ) {
-            BasicText(text, style = TextStyle(color = textColor, fontWeight = FontWeight.SemiBold))
+            Text(text, fontWeight = FontWeight.SemiBold)
         }
     }
 
-    // ===== LOGIC =====
+    // ================= ACTIONS =================
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
@@ -193,16 +226,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ================= UTILS =================
+
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
-        if (digits.startsWith("0") && digits.length == 10) digits = "38$digits"
-        if (digits.startsWith("380") && digits.length > 12) digits = digits.take(12)
+
+        if (digits.startsWith("0") && digits.length == 10) {
+            digits = "38$digits"
+        }
+
+        if (digits.startsWith("380") && digits.length > 12) {
+            digits = digits.take(12)
+        }
+
         return digits
     }
 
     private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
         return withContext(Dispatchers.IO) {
             val list = mutableListOf<Pair<String, String>>()
+
             val cursor: Cursor? = contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
@@ -213,9 +256,15 @@ class MainActivity : ComponentActivity() {
                 arrayOf("%$q%", "%$q%"),
                 null
             )
+
             cursor?.use {
-                while (it.moveToNext()) list.add(it.getString(0) to it.getString(1))
+                while (it.moveToNext()) {
+                    val name = it.getString(0)
+                    val number = it.getString(1)
+                    list.add(name to number)
+                }
             }
+
             list
         }
     }
