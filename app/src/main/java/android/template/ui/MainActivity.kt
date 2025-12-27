@@ -45,6 +45,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ================= UI =================
+
     @Composable
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
@@ -78,11 +80,8 @@ class MainActivity : ComponentActivity() {
                     onValueChange = {
                         query = it
                         normalized = normalizeNumber(it)
-
                         if (it.length >= 2) {
-                            scope.launch {
-                                results = searchContactsAsync(it)
-                            }
+                            scope.launch { results = searchContactsAsync(it) }
                         } else {
                             results = emptyList()
                         }
@@ -100,7 +99,7 @@ class MainActivity : ComponentActivity() {
                                 normalized = ""
                                 results = emptyList()
                             }) {
-                                Text("✕", fontSize = 18.sp, color = Color.White)
+                                Text("✕", color = Color.White)
                             }
                         }
                     },
@@ -142,9 +141,7 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        BrandButton("GSM", Color.Black, Color(0xFFF0F0F0)) {
-                            openGsm(normalized)
-                        }
+                        GsmButton { openGsm(normalized) }
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
                         BrandButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) {
@@ -180,10 +177,30 @@ class MainActivity : ComponentActivity() {
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = bgColor,
-                contentColor = textColor
+                contentColor = textColor,
+                disabledContainerColor = bgColor,
+                disabledContentColor = textColor
             )
         ) {
             Text(text, fontWeight = FontWeight.SemiBold)
+        }
+    }
+
+    @Composable
+    fun GsmButton(onClick: () -> Unit) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFF0F0F0),
+                contentColor = Color.Black,
+                disabledContainerColor = Color(0xFFF0F0F0),
+                disabledContentColor = Color.Black
+            )
+        ) {
+            Text("GSM", fontWeight = FontWeight.SemiBold)
         }
     }
 
@@ -220,22 +237,14 @@ class MainActivity : ComponentActivity() {
 
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
-
-        if (digits.startsWith("0") && digits.length == 10) {
-            digits = "38$digits"
-        }
-
-        if (digits.startsWith("380") && digits.length > 12) {
-            digits = digits.take(12)
-        }
-
+        if (digits.startsWith("0") && digits.length == 10) digits = "38$digits"
+        if (digits.startsWith("380") && digits.length > 12) digits = digits.take(12)
         return digits
     }
 
     private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
         return withContext(Dispatchers.IO) {
             val list = mutableListOf<Pair<String, String>>()
-
             val cursor: Cursor? = contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
@@ -246,15 +255,11 @@ class MainActivity : ComponentActivity() {
                 arrayOf("%$q%", "%$q%"),
                 null
             )
-
             cursor?.use {
                 while (it.moveToNext()) {
-                    val name = it.getString(0)
-                    val number = it.getString(1)
-                    list.add(name to number)
+                    list.add(it.getString(0) to it.getString(1))
                 }
             }
-
             list
         }
     }
