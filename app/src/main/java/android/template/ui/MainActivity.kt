@@ -14,14 +14,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +65,7 @@ class MainActivity : ComponentActivity() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFF7F8FF))
                 .padding(16.dp)
         ) {
 
@@ -125,6 +124,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // ===== FLOATING BUTTON BAR =====
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -138,8 +139,8 @@ class MainActivity : ComponentActivity() {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    MessengerButton("GSM", null) { openGsm(normalized) }
-                    MessengerButton("Telegram", R.drawable.ic_telegram) { openTelegram(normalized) }
+                    StyledButton("GSM") { openGsm(normalized) }
+                    StyledButton("Telegram") { openTelegram(normalized) }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -148,8 +149,8 @@ class MainActivity : ComponentActivity() {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    MessengerButton("WhatsApp", R.drawable.ic_whatsapp) { openWhatsApp(normalized) }
-                    MessengerButton("Viber", R.drawable.ic_viber) { openViber(normalized) }
+                    StyledButton("WhatsApp") { openWhatsApp(normalized) }
+                    StyledButton("Viber") { openViber(normalized) }
                 }
             }
         }
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
     // ================= BUTTON =================
 
     @Composable
-    fun MessengerButton(text: String, icon: Int?, onClick: () -> Unit) {
+    fun StyledButton(text: String, onClick: () -> Unit) {
         Surface(
             modifier = Modifier
                 .height(56.dp)
@@ -168,31 +169,12 @@ class MainActivity : ComponentActivity() {
             shadowElevation = 6.dp,
             onClick = onClick
         ) {
-            Row(
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                if (icon != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(icon),
-                            contentDescription = null,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                }
-
                 Text(
-                    text,
+                    text = text,
                     color = Color(0xFF4C5DFF),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
