@@ -14,8 +14,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,7 +65,11 @@ class MainActivity : ComponentActivity() {
                     .padding(bottom = 150.dp)
             ) {
 
-                Text("CallChooser", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+                Text(
+                    "CallChooser",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -76,14 +78,21 @@ class MainActivity : ComponentActivity() {
                     onValueChange = {
                         query = it
                         normalized = normalizeNumber(it)
+
                         if (it.length >= 2) {
-                            scope.launch { results = searchContactsAsync(it) }
+                            scope.launch {
+                                results = searchContactsAsync(it)
+                            }
                         } else {
                             results = emptyList()
                         }
                     },
                     label = { Text("Імʼя або номер", color = Color.White) },
-                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 18.sp),
+                    textStyle = LocalTextStyle.current.copy(
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = {
@@ -91,7 +100,7 @@ class MainActivity : ComponentActivity() {
                                 normalized = ""
                                 results = emptyList()
                             }) {
-                                Text("✕", color = Color.White)
+                                Text("✕", fontSize = 18.sp, color = Color.White)
                             }
                         }
                     },
@@ -121,6 +130,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // ===== FLOATING BUTTON BAR =====
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -132,7 +142,9 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        GsmButton { openGsm(normalized) }
+                        BrandButton("GSM", Color.Black, Color(0xFFF0F0F0)) {
+                            openGsm(normalized)
+                        }
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
                         BrandButton("Telegram", Color(0xFF229ED9), Color(0xFFEAF6FD)) {
@@ -163,25 +175,19 @@ class MainActivity : ComponentActivity() {
     fun BrandButton(text: String, textColor: Color, bgColor: Color, onClick: () -> Unit) {
         Button(
             onClick = onClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = bgColor, contentColor = textColor)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = bgColor,
+                contentColor = textColor
+            )
         ) {
             Text(text, fontWeight = FontWeight.SemiBold)
         }
     }
 
-    @Composable
-    fun GsmButton(onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F0F0), contentColor = Color.Black)
-        ) {
-            Icon(Icons.Default.Phone, contentDescription = "GSM", tint = Color.Black)
-        }
-    }
-
-    // ===== actions & utils =====
+    // ================= ACTIONS =================
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
@@ -210,16 +216,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ================= UTILS =================
+
     private fun normalizeNumber(input: String): String {
         var digits = input.filter { it.isDigit() }
-        if (digits.startsWith("0") && digits.length == 10) digits = "38$digits"
-        if (digits.startsWith("380") && digits.length > 12) digits = digits.take(12)
+
+        if (digits.startsWith("0") && digits.length == 10) {
+            digits = "38$digits"
+        }
+
+        if (digits.startsWith("380") && digits.length > 12) {
+            digits = digits.take(12)
+        }
+
         return digits
     }
 
     private suspend fun searchContactsAsync(q: String): List<Pair<String, String>> {
         return withContext(Dispatchers.IO) {
             val list = mutableListOf<Pair<String, String>>()
+
             val cursor: Cursor? = contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
@@ -230,9 +246,15 @@ class MainActivity : ComponentActivity() {
                 arrayOf("%$q%", "%$q%"),
                 null
             )
+
             cursor?.use {
-                while (it.moveToNext()) list.add(it.getString(0) to it.getString(1))
+                while (it.moveToNext()) {
+                    val name = it.getString(0)
+                    val number = it.getString(1)
+                    list.add(name to number)
+                }
             }
+
             list
         }
     }
