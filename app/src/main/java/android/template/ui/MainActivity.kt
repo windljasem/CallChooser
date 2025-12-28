@@ -1,4 +1,4 @@
-package android.template.ui
+package com.callchooser.app
 
 import android.Manifest
 import android.content.Intent
