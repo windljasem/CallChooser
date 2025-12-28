@@ -25,11 +25,11 @@ plugins {
 }
 
 android {
-    namespace = "android.template"
+    namespace = "com.callchooser.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "android.template"
+        applicationId = "com.callchooser.app"
         minSdk = 23
         targetSdk = 36
         versionCode = 1
