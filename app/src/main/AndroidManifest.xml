@@ -13,7 +13,7 @@
         android:theme="@style/Theme.MyApplication">
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name="com.callchooser.app.MainActivity"
             android:exported="true">
 
             <intent-filter>
