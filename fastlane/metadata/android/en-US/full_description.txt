@@ -1,0 +1,11 @@
+CallChooser is a simple Android utility that lets you choose how to call any contact.
+
+You can call using:
+- GSM
+- Telegram
+- WhatsApp
+- Viber
+
+If a messenger is not installed, the app automatically falls back to a regular phone call.
+
+No tracking. No ads.
