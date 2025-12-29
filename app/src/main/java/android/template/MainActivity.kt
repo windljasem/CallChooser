@@ -2,6 +2,8 @@ package com.callchooser.app
 
 import android.Manifest
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -211,6 +213,7 @@ fun GsmSmartButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
+            .clip(RoundedCornerShape(50))   // овальна форма
             .combinedClickable(
                 onClick = { onSelect() },
                 onLongClick = { onCall() }
@@ -221,13 +224,14 @@ fun GsmSmartButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("GSM", color = Color.Black, fontWeight = FontWeight.SemiBold)
             Text(
-                "Tap – select • Hold – call",
+                "Tap – call • Hold – select",
                 fontSize = 11.sp,
                 color = Color(0xFF555555)
             )
         }
     }
 }
+
 
     // ================= ACTIONS =================
 
