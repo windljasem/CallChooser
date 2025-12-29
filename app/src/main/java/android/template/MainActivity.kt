@@ -2,6 +2,10 @@ package com.callchooser.app
 
 import android.Manifest
 import androidx.compose.foundation.combinedClickable
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import android.content.Intent
@@ -145,14 +149,12 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        GsmSmartButton(
-                            number = normalized,
-                            onSelect = {
-                            query = normalized
-                            },
-                            onCall = {
-                                openGsm(normalized)
-                            }  
+                        StyledButtonWithLongPress(
+                            text = "GSM",
+                            bg = Color(0xFFF0F0F0),
+                            fg = Color.Black,
+                            onClick = { openGsm(normalized) },
+                            onLongPress = { copyNumber(normalized) } 
                          )   
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
@@ -203,34 +205,6 @@ class MainActivity : ComponentActivity() {
             Text(text, fontWeight = FontWeight.SemiBold)
         }
     }
-@Composable
-fun GsmSmartButton(
-    number: String,
-    onSelect: () -> Unit,
-    onCall: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(50))   // овальна форма
-            .combinedClickable(
-                onClick = { onSelect() },
-                onLongClick = { onCall() }
-            )
-            .background(Color(0xFFF0F0F0)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("GSM", color = Color.Black, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Tap – call • Hold – select",
-                fontSize = 11.sp,
-                color = Color(0xFF555555)
-            )
-        }
-    }
-}
 
 
     // ================= ACTIONS =================
