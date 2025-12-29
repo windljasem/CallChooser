@@ -143,11 +143,15 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        StyledButton(
-                            "GSM",
-                            bg = Color(0xFFF0F0F0),
-                            fg = Color.Black
-                        ) { openGsm(normalized) }
+                        GsmSmartButton(
+                            number = normalized,
+                            onSelect = {
+                            // нічого не робимо, номер уже в полі
+                            },
+                            onCall = {
+                                openGsm(normalized)
+                            }  
+                         )   
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
                         StyledButton(
