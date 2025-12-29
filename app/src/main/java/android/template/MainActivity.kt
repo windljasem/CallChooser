@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
-        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$num")))
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+$num")))
     }
 
     private fun openWhatsApp(num: String) {
