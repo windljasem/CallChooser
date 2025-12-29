@@ -146,7 +146,7 @@ class MainActivity : ComponentActivity() {
                         GsmSmartButton(
                             number = normalized,
                             onSelect = {
-                            // нічого не робимо, номер уже в полі
+                            query = normalized
                             },
                             onCall = {
                                 openGsm(normalized)
