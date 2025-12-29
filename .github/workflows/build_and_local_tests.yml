@@ -22,6 +22,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Fix Gradle Wrapper for F-Droid
+        run: |
+          ./gradlew wrapper \
+            --gradle-version 9.2.1 \
+            --gradle-distribution-sha256-sum 72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f
+
+      - name: Commit Gradle Wrapper
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
+          git commit -m "Fix Gradle wrapper integrity for F-Droid" || echo "No changes"
+          git push
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
