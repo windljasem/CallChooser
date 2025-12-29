@@ -205,9 +205,49 @@ class MainActivity : ComponentActivity() {
             Text(text, fontWeight = FontWeight.SemiBold)
         }
     }
+@Composable
+fun StyledButtonWithLongPress(
+    text: String,
+    bg: Color,
+    fg: Color,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = bg,
+            contentColor = fg
+        )
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
+
+    // Long press overlay
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .padding(0.dp)
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongPress
+            )
+    )
+}
 
 
     // ================= ACTIONS =================
+private fun copyNumber(num: String) {
+    if (num.isBlank()) return
+
+    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("phone", "+$num"))
+
+    Toast.makeText(this, "+$num copied", Toast.LENGTH_SHORT).show()
+}
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
