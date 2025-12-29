@@ -213,30 +213,22 @@ fun StyledButtonWithLongPress(
     onClick: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = bg,
-            contentColor = fg
-        )
-    ) {
-        Text(text, fontWeight = FontWeight.SemiBold)
-    }
-
-    // Long press overlay
     Box(
         modifier = Modifier
-            .matchParentSize()
-            .padding(0.dp)
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(50))
+            .background(bg)
             .combinedClickable(
-                onClick = {},
+                onClick = onClick,
                 onLongClick = onLongPress
-            )
-    )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = fg, fontWeight = FontWeight.SemiBold)
+    }
 }
+
 
 
     // ================= ACTIONS =================
