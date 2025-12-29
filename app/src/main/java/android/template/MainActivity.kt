@@ -1,6 +1,7 @@
 package com.callchooser.app
 
 import android.Manifest
+import androidx.compose.foundation.combinedClickable
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -196,6 +197,33 @@ class MainActivity : ComponentActivity() {
             Text(text, fontWeight = FontWeight.SemiBold)
         }
     }
+@Composable
+fun GsmSmartButton(
+    number: String,
+    onSelect: () -> Unit,
+    onCall: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .combinedClickable(
+                onClick = { onSelect() },
+                onLongClick = { onCall() }
+            )
+            .background(Color(0xFFF0F0F0)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("GSM", color = Color.Black, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Tap – select • Hold – call",
+                fontSize = 11.sp,
+                color = Color(0xFF555555)
+            )
+        }
+    }
+}
 
     // ================= ACTIONS =================
 
