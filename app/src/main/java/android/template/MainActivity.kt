@@ -21,18 +21,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.draw.shadow
 
 class MainActivity : ComponentActivity() {
 
@@ -62,8 +70,9 @@ class MainActivity : ComponentActivity() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF2C5E86))   // 🔵 фон
+                .background(Color(0xFF2C5E86))
                 .padding(16.dp)
+                .statusBarsPadding() // 🔥 Відступ від шторки!
         ) {
 
             Column(
@@ -72,10 +81,14 @@ class MainActivity : ComponentActivity() {
                     .padding(bottom = 150.dp)
             ) {
 
+                // 🎨 НОВИЙ ЗАГОЛОВОК
                 Text(
-                    "CallChooser",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White
+                    "Call Chooser",
+                    style = MaterialTheme.typography.headlineSmall, // Менший розмір
+                    fontWeight = FontWeight.Light, // Легкий шрифт
+                    color = Color.White.copy(alpha = 0.9f), // Трохи прозорості
+                    letterSpacing = 2.sp, // Розрідження літер
+                    modifier = Modifier.padding(vertical = 8.dp)
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -94,7 +107,7 @@ class MainActivity : ComponentActivity() {
                             results = emptyList()
                         }
                     },
-                    label = { Text("Імʼя або номер") },
+                    label = { Text("Ім'я або номер") },
                     textStyle = LocalTextStyle.current.copy(
                         color = Color.White,
                         fontSize = 17.sp,
@@ -151,6 +164,7 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
                         StyledButtonWithLongPress(
                             text = "GSM",
+                            icon = Icons.Default.Call,
                             bg = Color(0xFFF0F0F0),
                             fg = Color.Black,
                             onClick = { openGsm(normalized) },
@@ -159,7 +173,8 @@ class MainActivity : ComponentActivity() {
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
                         StyledButton(
-                            "Telegram",
+                            text = "Telegram",
+                            icon = Icons.Default.Send,
                             bg = Color(0xFFEAF6FD),
                             fg = Color(0xFF229ED9)
                         ) { openTelegram(normalized) }
@@ -171,14 +186,16 @@ class MainActivity : ComponentActivity() {
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
                         StyledButton(
-                            "WhatsApp",
+                            text = "WhatsApp",
+                            icon = Icons.Default.Phone,
                             bg = Color(0xFFE9F9EF),
                             fg = Color(0xFF25D366)
                         ) { openWhatsApp(normalized) }
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
                         StyledButton(
-                            "Viber",
+                            text = "Viber",
+                            icon = Icons.Default.Chat,
                             bg = Color(0xFFF0EDFF),
                             fg = Color(0xFF7360F2)
                         ) { openViber(normalized) }
@@ -188,58 +205,90 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // 🎨 КНОПКА З ІКОНКОЮ
     @Composable
-    fun StyledButton(text: String, bg: Color, fg: Color, onClick: () -> Unit) {
+    fun StyledButton(
+        text: String, 
+        icon: ImageVector,
+        bg: Color, 
+        fg: Color, 
+        onClick: () -> Unit
+    ) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(56.dp)
+                .shadow(4.dp, RoundedCornerShape(50)), // Тінь
             colors = ButtonDefaults.buttonColors(
                 containerColor = bg,
-                contentColor = fg,
-                disabledContainerColor = bg,
-                disabledContentColor = fg
-            )
+                contentColor = fg
+            ),
+            shape = RoundedCornerShape(50)
         ) {
-            Text(text, fontWeight = FontWeight.SemiBold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(text, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
-@Composable
-fun StyledButtonWithLongPress(
-    text: String,
-    bg: Color,
-    fg: Color,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(50))
-            .background(bg)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            ),
-        contentAlignment = Alignment.Center
+
+    // 🎨 GSM КНОПКА З LONG PRESS + ІКОНКА
+    @Composable
+    fun StyledButtonWithLongPress(
+        text: String,
+        icon: ImageVector,
+        bg: Color,
+        fg: Color,
+        onClick: () -> Unit,
+        onLongPress: () -> Unit
     ) {
-        Text(text, color = fg, fontWeight = FontWeight.SemiBold)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .shadow(4.dp, RoundedCornerShape(50)) // Тінь
+                .clip(RoundedCornerShape(50))
+                .background(bg)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongPress
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = fg,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(text, color = fg, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
-}
-
-
 
     // ================= ACTIONS =================
-private fun copyNumber(num: String) {
-    if (num.isBlank()) return
+    private fun copyNumber(num: String) {
+        if (num.isBlank()) return
 
-    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("phone", "+$num"))
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("phone", "+$num"))
 
-    Toast.makeText(this, "+$num copied", Toast.LENGTH_SHORT).show()
-}
+        Toast.makeText(this, "+$num скопійовано", Toast.LENGTH_SHORT).show()
+    }
 
     private fun openGsm(num: String) {
         if (num.isBlank()) return
