@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
 
                 // 🔥 Покращений список результатів
                 if (results.isNotEmpty()) {
-                    // Лічильник знайдених
+                    // Лічільник знайдених
                     Text(
                         "Знайдено: ${results.size}",
                         color = Color.White.copy(alpha = 0.7f),
@@ -143,14 +143,19 @@ class MainActivity : ComponentActivity() {
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        // 🔥 Ховаємо клавіатуру при виборі контакту
-                                        focusManager.clearFocus()
-                                        
-                                        query = item.second
-                                        normalized = normalizeNumber(item.second)
-                                        results = emptyList()
-                                    },
+                                    .combinedClickable(
+                                        onClick = {
+                                            // 🔥 Короткий клік - вибрати контакт
+                                            query = item.second
+                                            normalized = normalizeNumber(item.second)
+                                            results = emptyList()
+                                            focusManager.clearFocus()
+                                        },
+                                        onLongClick = {
+                                            // 🔥 Довгий клік - сховати клавіатуру і дати скролити
+                                            focusManager.clearFocus()
+                                        }
+                                    ),
                                 color = Color.White.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
