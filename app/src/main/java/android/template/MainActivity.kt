@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,13 +59,16 @@ class MainActivity : ComponentActivity() {
         var normalized by remember { mutableStateOf("") }
         var results by remember { mutableStateOf(listOf<Pair<String, String>>()) }
         val scope = rememberCoroutineScope()
+        
+        // 🔥 Менеджер фокусу для ховання клавіатури
+        val focusManager = LocalFocusManager.current
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF2C5E86))
                 .padding(16.dp)
-                .statusBarsPadding() // 🔥 Відступ від шторки!
+                .statusBarsPadding() // 🔥 Відступ від шторки
         ) {
 
             Column(
@@ -73,13 +77,13 @@ class MainActivity : ComponentActivity() {
                     .padding(bottom = 150.dp)
             ) {
 
-                // 🎨 НОВИЙ ЗАГОЛОВОК
+                // 🎨 Покращений заголовок
                 Text(
                     "Call Chooser",
-                    style = MaterialTheme.typography.headlineSmall, // Менший розмір
-                    fontWeight = FontWeight.Light, // Легкий шрифт
-                    color = Color.White.copy(alpha = 0.9f), // Трохи прозорості
-                    letterSpacing = 2.sp, // Розрідження літер
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Light,
+                    color = Color.White.copy(alpha = 0.9f),
+                    letterSpacing = 2.sp,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
@@ -121,21 +125,51 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(Modifier.height(12.dp))
 
+                // 🔥 Покращений список результатів
                 if (results.isNotEmpty()) {
-                    LazyColumn {
+                    // Лічильник знайдених
+                    Text(
+                        "Знайдено: ${results.size}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         items(results) { item ->
-                            Column(
+                            Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
+                                        // 🔥 Ховаємо клавіатуру при виборі контакту
+                                        focusManager.clearFocus()
+                                        
                                         query = item.second
                                         normalized = normalizeNumber(item.second)
                                         results = emptyList()
-                                    }
-                                    .padding(12.dp)
+                                    },
+                                color = Color.White.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(item.first, color = Color.White)
-                                Text(item.second, style = MaterialTheme.typography.bodySmall, color = Color.White)
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        item.first, 
+                                        color = Color.White, 
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 16.sp
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        item.second,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -205,7 +239,8 @@ class MainActivity : ComponentActivity() {
                 contentColor = fg,
                 disabledContainerColor = bg,
                 disabledContentColor = fg
-            )
+            ),
+            shape = RoundedCornerShape(50)
         ) {
             Text(text, fontWeight = FontWeight.SemiBold)
         }
