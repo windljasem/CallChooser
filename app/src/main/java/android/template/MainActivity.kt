@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF2C5E86))
@@ -104,157 +104,156 @@ class MainActivity : ComponentActivity() {
                 .statusBarsPadding()
         ) {
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
+            // Динамічний заголовок: ім'я контакта або назва програми
+            Text(
+                text = selectedContactName ?: "Call Chooser",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Light,
+                color = Color.White.copy(alpha = 0.9f),
+                letterSpacing = 2.sp,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
 
-                // Динамічний заголовок: ім'я контакта або назва програми
-                Text(
-                    text = selectedContactName ?: "Call Chooser",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Light,
-                    color = Color.White.copy(alpha = 0.9f),
-                    letterSpacing = 2.sp,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+            Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(12.dp))
+            // Поле пошуку
+            OutlinedTextField(
+                value = query,
+                onValueChange = {
+                    query = it
+                    normalized = normalizeNumber(it)
+                    selectedContactId = null
+                    selectedContactName = null
+                    messengerStates = MessengerAvailability()
 
-                // Поле пошуку
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = {
-                        query = it
-                        normalized = normalizeNumber(it)
-                        selectedContactId = null
-                        selectedContactName = null
-                        messengerStates = MessengerAvailability()
-
-                        if (it.length >= 2) {
-                            scope.launch {
-                                searchResults = searchContactsAsync(it)
-                            }
-                        } else {
+                    if (it.length >= 2) {
+                        scope.launch {
+                            searchResults = searchContactsAsync(it)
+                        }
+                    } else {
+                        searchResults = emptyList()
+                    }
+                },
+                label = { Text("Ім'я або номер") },
+                textStyle = LocalTextStyle.current.copy(
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Normal
+                ),
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = {
+                            query = ""
+                            normalized = ""
                             searchResults = emptyList()
-                        }
-                    },
-                    label = { Text("Ім'я або номер") },
-                    textStyle = LocalTextStyle.current.copy(
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = {
-                                query = ""
-                                normalized = ""
-                                searchResults = emptyList()
-                                selectedContactId = null
-                                selectedContactName = null
-                                messengerStates = MessengerAvailability()
-                            }) {
-                                Text("✕", fontSize = 18.sp, color = Color.White)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                // Результати пошуку або останні дзвінки
-                when {
-                    searchResults.isNotEmpty() -> {
-                        // Показуємо результати пошуку
-                        Text(
-                            "Знайдено: ${searchResults.size}",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(searchResults) { contact ->
-                                ContactCard(
-                                    contact = contact,
-                                    onClick = {
-                                        selectedContactName = contact.name
-                                        query = contact.number
-                                        normalized = normalizeNumber(contact.number)
-                                        selectedContactId = contact.id
-                                        searchResults = emptyList()
-                                        focusManager.clearFocus()
-                                        
-                                        // Перевірка месенджерів
-                                        if (contact.id != 0L) {
-                                            scope.launch {
-                                                messengerStates = checkAllMessengers(contact.id)
-                                            }
-                                        }
-                                    },
-                                    onLongClick = {
-                                        focusManager.clearFocus()
-                                    }
-                                )
-                            }
+                            selectedContactId = null
+                            selectedContactName = null
+                            messengerStates = MessengerAvailability()
+                        }) {
+                            Text("✕", fontSize = 18.sp, color = Color.White)
                         }
                     }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Результати пошуку або останні дзвінки
+            when {
+                searchResults.isNotEmpty() -> {
+                    // Показуємо результати пошуку
+                    Text(
+                        "Знайдено: ${searchResults.size}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                     
-                    query.isEmpty() && recentCalls.isNotEmpty() -> {
-                        // Показуємо останні дзвінки
-                        Text(
-                            "Останні дзвінки",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(recentCalls) { call ->
-                                RecentCallCard(
-                                    call = call,
-                                    onClick = {
-                                        selectedContactName = call.name
-                                        query = call.number
-                                        normalized = call.normalizedNumber
-                                        selectedContactId = call.contactId
-                                        focusManager.clearFocus()
-                                        
-                                        // Перевірка месенджерів
-                                        if (call.contactId != null && call.contactId != 0L) {
-                                            scope.launch {
-                                                messengerStates = checkAllMessengers(call.contactId)
-                                            }
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(bottom = 12.dp)
+                    ) {
+                        items(searchResults) { contact ->
+                            ContactCard(
+                                contact = contact,
+                                onClick = {
+                                    selectedContactName = contact.name
+                                    query = contact.number
+                                    normalized = normalizeNumber(contact.number)
+                                    selectedContactId = contact.id
+                                    searchResults = emptyList()
+                                    focusManager.clearFocus()
+                                    
+                                    // Перевірка месенджерів
+                                    if (contact.id != 0L) {
+                                        scope.launch {
+                                            messengerStates = checkAllMessengers(contact.id)
                                         }
                                     }
-                                )
-                            }
+                                },
+                                onLongClick = {
+                                    focusManager.clearFocus()
+                                }
+                            )
                         }
                     }
                 }
+                
+                query.isEmpty() && recentCalls.isNotEmpty() -> {
+                    // Показуємо останні дзвінки
+                    Text(
+                        "Останні дзвінки",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(bottom = 12.dp)
+                    ) {
+                        items(recentCalls) { call ->
+                            RecentCallCard(
+                                call = call,
+                                onClick = {
+                                    selectedContactName = call.name
+                                    query = call.number
+                                    normalized = call.normalizedNumber
+                                    selectedContactId = call.contactId
+                                    focusManager.clearFocus()
+                                    
+                                    // Перевірка месенджерів
+                                    if (call.contactId != null && call.contactId != 0L) {
+                                        scope.launch {
+                                            messengerStates = checkAllMessengers(call.contactId)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                else -> {
+                    // Порожній простір якщо немає ні пошуку ні дзвінків
+                    Spacer(Modifier.weight(1f))
+                }
             }
 
-            // Кнопки месенджерів
+            // Кнопки месенджерів (завжди внизу після списку)
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(12.dp)
                     .imePadding()
                     .navigationBarsPadding()
             ) {
