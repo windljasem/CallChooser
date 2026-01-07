@@ -24,8 +24,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
@@ -211,10 +209,10 @@ class MainActivity : ComponentActivity() {
                                     isListening = false
                                 }}
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Mic,
-                                    contentDescription = "Голосовий пошук",
-                                    tint = if (isListening) Color.Red else Color.White.copy(alpha = 0.7f)
+                                Text(
+                                    text = "🎤",
+                                    fontSize = 20.sp,
+                                    color = if (isListening) Color.Red else Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -251,23 +249,19 @@ class MainActivity : ComponentActivity() {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                    val scale by infiniteTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.3f,
+                    val size by infiniteTransition.animateDp(
+                        initialValue = 10.dp,
+                        targetValue = 14.dp,
                         animationSpec = infiniteRepeatable(
                             animation = tween(600),
                             repeatMode = RepeatMode.Reverse
                         ),
-                        label = "scale"
+                        label = "size"
                     )
                     
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
+                            .size(size)
                             .background(Color.Red, shape = androidx.compose.foundation.shape.CircleShape)
                     )
                     
