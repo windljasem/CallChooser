@@ -34,6 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -126,31 +129,47 @@ class MainActivity : ComponentActivity() {
         
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
+        val lifecycleOwner = LocalLifecycleOwner.current
 
-        // Завантаження останніх дзвінків при запуску
-        LaunchedEffect(Unit) {
-            android.util.Log.d("CallChooser", "LaunchedEffect started")
-            android.util.Log.d("CallChooser", "Has READ_CALL_LOG permission: ${hasCallLogPermission()}")
+        // Функція для завантаження останніх дзвінків
+        fun loadRecentCalls() {
+            scope.launch {
+                android.util.Log.d("CallChooser", "Loading recent calls...")
+                android.util.Log.d("CallChooser", "Has READ_CALL_LOG permission: ${hasCallLogPermission()}")
+                
+                if (hasCallLogPermission()) {
+                    android.util.Log.d("CallChooser", "Starting to load recent calls...")
+                    isLoadingCalls = true
+                    recentCalls = loadRecentCallsAsync()
+                    isLoadingCalls = false
+                    android.util.Log.d("CallChooser", "Loaded ${recentCalls.size} recent calls")
+                } else {
+                    android.util.Log.w("CallChooser", "READ_CALL_LOG permission not granted yet")
+                }
+            }
+        }
+
+        // Оновлюємо список дзвінків при кожному поверненні до екрану (ON_RESUME)
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    android.util.Log.d("CallChooser", "ON_RESUME: Reloading recent calls")
+                    loadRecentCalls()
+                }
+            }
             
-            if (hasCallLogPermission()) {
-                android.util.Log.d("CallChooser", "Starting to load recent calls...")
-                isLoadingCalls = true
-                recentCalls = loadRecentCallsAsync()
-                isLoadingCalls = false
-                android.util.Log.d("CallChooser", "Loaded ${recentCalls.size} recent calls")
-            } else {
-                android.util.Log.w("CallChooser", "READ_CALL_LOG permission not granted yet")
+            lifecycleOwner.lifecycle.addObserver(observer)
+            
+            onDispose {
+                android.util.Log.d("CallChooser", "DisposableEffect: Removing lifecycle observer")
+                lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
 
         // Функція для ручного оновлення списку
         fun refreshRecentCalls() {
-            scope.launch {
-                android.util.Log.d("CallChooser", "Manual refresh triggered")
-                isLoadingCalls = true
-                recentCalls = loadRecentCallsAsync()
-                isLoadingCalls = false
-            }
+            android.util.Log.d("CallChooser", "Manual refresh triggered")
+            loadRecentCalls()
         }
 
         Column(
