@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
         var searchResults by remember { mutableStateOf(listOf<ContactItem>()) }
         var recentCalls by remember { mutableStateOf(listOf<RecentCall>()) }
         var selectedContactId by remember { mutableStateOf<Long?>(null) }
+        var selectedContactName by remember { mutableStateOf<String?>(null) }
         var messengerStates by remember { mutableStateOf(MessengerAvailability()) }
         
         val scope = rememberCoroutineScope()
@@ -106,16 +107,17 @@ class MainActivity : ComponentActivity() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 150.dp)
             ) {
 
-                // Заголовок
+                // Динамічний заголовок: ім'я контакта або назва програми
                 Text(
-                    "Call Chooser",
+                    text = selectedContactName ?: "Call Chooser",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Light,
                     color = Color.White.copy(alpha = 0.9f),
                     letterSpacing = 2.sp,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
@@ -128,6 +130,7 @@ class MainActivity : ComponentActivity() {
                         query = it
                         normalized = normalizeNumber(it)
                         selectedContactId = null
+                        selectedContactName = null
                         messengerStates = MessengerAvailability()
 
                         if (it.length >= 2) {
@@ -151,6 +154,7 @@ class MainActivity : ComponentActivity() {
                                 normalized = ""
                                 searchResults = emptyList()
                                 selectedContactId = null
+                                selectedContactName = null
                                 messengerStates = MessengerAvailability()
                             }) {
                                 Text("✕", fontSize = 18.sp, color = Color.White)
@@ -174,13 +178,16 @@ class MainActivity : ComponentActivity() {
                         )
                         
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             items(searchResults) { contact ->
                                 ContactCard(
                                     contact = contact,
                                     onClick = {
+                                        selectedContactName = contact.name
                                         query = contact.number
                                         normalized = normalizeNumber(contact.number)
                                         selectedContactId = contact.id
@@ -213,13 +220,16 @@ class MainActivity : ComponentActivity() {
                         )
                         
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             items(recentCalls) { call ->
                                 RecentCallCard(
                                     call = call,
                                     onClick = {
+                                        selectedContactName = call.name
                                         query = call.number
                                         normalized = call.normalizedNumber
                                         selectedContactId = call.contactId
@@ -472,27 +482,27 @@ class MainActivity : ComponentActivity() {
                 val cursor = contentResolver.query(
                     ContactsContract.Data.CONTENT_URI,
                     arrayOf(ContactsContract.Data.MIMETYPE),
-                    "${ContactsContract.Data.CONTACT_ID}=? AND ${ContactsContract.Data.MIMETYPE} IN (?,?,?)",
-                    arrayOf(
-                        contactId.toString(),
-                        "vnd.android.cursor.item/vnd.com.whatsapp.profile",
-                        "vnd.android.cursor.item/vnd.org.telegram.messenger.android.profile",
-                        "vnd.android.cursor.item/vnd.com.viber.voip.call"
-                    ),
+                    "${ContactsContract.Data.CONTACT_ID}=?",
+                    arrayOf(contactId.toString()),
                     null
                 )
 
                 cursor?.use {
                     while (it.moveToNext()) {
-                        when (val mimetype = it.getString(0)) {
-                            "vnd.android.cursor.item/vnd.com.whatsapp.profile" -> whatsApp = true
-                            "vnd.android.cursor.item/vnd.org.telegram.messenger.android.profile" -> telegram = true
-                            "vnd.android.cursor.item/vnd.com.viber.voip.call" -> viber = true
+                        val mimetype = it.getString(0)
+                        android.util.Log.d("CallChooser", "MIMETYPE: $mimetype")
+                        
+                        when {
+                            mimetype.contains("whatsapp", ignoreCase = true) -> whatsApp = true
+                            mimetype.contains("telegram", ignoreCase = true) -> telegram = true
+                            mimetype.contains("viber", ignoreCase = true) -> viber = true
                         }
                     }
                 }
+                
+                android.util.Log.d("CallChooser", "Messengers - WA:$whatsApp TG:$telegram VB:$viber")
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("CallChooser", "Error checking messengers", e)
             }
 
             MessengerAvailability(whatsApp, telegram, viber)
@@ -512,6 +522,8 @@ class MainActivity : ComponentActivity() {
             val seenNumbers = mutableSetOf<String>()
 
             try {
+                android.util.Log.d("CallChooser", "Loading recent calls...")
+                
                 val cursor = contentResolver.query(
                     CallLog.Calls.CONTENT_URI,
                     arrayOf(
@@ -529,6 +541,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 cursor?.use {
+                    android.util.Log.d("CallChooser", "Cursor count: ${it.count}")
                     while (it.moveToNext() && list.size < 10) {
                         val number = it.getString(0) ?: continue
                         
@@ -561,8 +574,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                
+                android.util.Log.d("CallChooser", "Loaded ${list.size} recent calls")
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("CallChooser", "Error loading recent calls", e)
             }
 
             list
