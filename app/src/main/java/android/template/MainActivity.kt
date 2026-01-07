@@ -249,19 +249,19 @@ class MainActivity : ComponentActivity() {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                    val size by infiniteTransition.animateDp(
-                        initialValue = 10.dp,
-                        targetValue = 14.dp,
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.4f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(600),
                             repeatMode = RepeatMode.Reverse
                         ),
-                        label = "size"
+                        label = "scale"
                     )
                     
                     Box(
                         modifier = Modifier
-                            .size(size)
+                            .size((10 * scale).dp)
                             .background(Color.Red, shape = androidx.compose.foundation.shape.CircleShape)
                     )
                     
