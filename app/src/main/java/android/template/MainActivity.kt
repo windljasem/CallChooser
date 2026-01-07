@@ -205,23 +205,28 @@ class MainActivity : ComponentActivity() {
                         if (query.isEmpty()) {
                             IconButton(
                                 onClick = { startVoiceSearch { result -> 
-                                    android.util.Log.d("CallChooser", "Voice callback: result='$result'")
-                                    query = result
-                                    normalized = normalizeNumber(result)
-                                    selectedContactId = null
-                                    selectedContactName = null
-                                    messengerStates = MessengerAvailability()
-                                    isListening = false
+                                    android.util.Log.d("CallChooser", "Voice callback: result='$result', length=${result.length}")
                                     
-                                    // Запускаємо пошук автоматично
-                                    if (result.length >= 2) {
-                                        android.util.Log.d("CallChooser", "Voice callback: launching search...")
+                                    if (result.isNotBlank() && result.length >= 2) {
+                                        query = result
+                                        normalized = normalizeNumber(result)
+                                        selectedContactId = null
+                                        selectedContactName = null
+                                        messengerStates = MessengerAvailability()
+                                        isListening = false
+                                        
+                                        // Прибираємо фокус з поля
+                                        focusManager.clearFocus()
+                                        
+                                        // Запускаємо пошук автоматично
+                                        android.util.Log.d("CallChooser", "Voice callback: launching search for '$result'")
                                         scope.launch {
                                             searchResults = searchContactsAsync(result)
                                             android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
                                         }
                                     } else {
-                                        android.util.Log.d("CallChooser", "Voice callback: query too short, skipping search")
+                                        android.util.Log.d("CallChooser", "Voice callback: query too short or blank, result='$result'")
+                                        isListening = false
                                     }
                                 }}
                             ) {
@@ -1122,15 +1127,25 @@ class MainActivity : ComponentActivity() {
             try {
                 android.util.Log.d("CallChooser", "Search: query='$q', variants=$variants")
                 
+                // Перевіряємо чи є цифри в запиті
+                val hasDigits = q.any { it.isDigit() }
+                
                 // Створюємо WHERE clause з усіма варіантами
                 val whereClause = variants.joinToString(" OR ") { 
                     "LOWER(${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME}) LIKE ?" 
-                } + " OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?"
+                } + if (hasDigits) {
+                    " OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?"
+                } else {
+                    ""
+                }
                 
-                // Створюємо параметри (всі варіанти + номер)
+                // Створюємо параметри (всі варіанти + номер тільки якщо є цифри)
                 val whereArgs = variants.map { "%$it%" }.toMutableList()
-                whereArgs.add("%${q.filter { it.isDigit() }}%")
+                if (hasDigits) {
+                    whereArgs.add("%${q.filter { it.isDigit() }}%")
+                }
                 
+                android.util.Log.d("CallChooser", "Search: hasDigits=$hasDigits")
                 android.util.Log.d("CallChooser", "Search: WHERE=$whereClause")
                 android.util.Log.d("CallChooser", "Search: ARGS=${whereArgs.joinToString()}")
                 
