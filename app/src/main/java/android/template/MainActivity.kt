@@ -15,14 +15,20 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.CallLog
 import android.provider.ContactsContract
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.RecognitionListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
+        private const val VOICE_SEARCH_REQUEST_CODE = 101
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +76,12 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             permissions.add(Manifest.permission.READ_CALL_LOG)
+        }
+        
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissions.add(Manifest.permission.RECORD_AUDIO)
         }
         
         if (permissions.isNotEmpty()) {
@@ -111,6 +124,7 @@ class MainActivity : ComponentActivity() {
         var selectedContactName by remember { mutableStateOf<String?>(null) }
         var messengerStates by remember { mutableStateOf(MessengerAvailability()) }
         var isLoadingCalls by remember { mutableStateOf(false) }
+        var isListening by remember { mutableStateOf(false) }
         
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
@@ -188,21 +202,85 @@ class MainActivity : ComponentActivity() {
                     fontWeight = FontWeight.Normal
                 ),
                 trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = {
-                            query = ""
-                            normalized = ""
-                            searchResults = emptyList()
-                            selectedContactId = null
-                            selectedContactName = null
-                            messengerStates = MessengerAvailability()
-                        }) {
-                            Text("✕", fontSize = 18.sp, color = Color.White)
+                    Row {
+                        // Кнопка голосового пошуку
+                        if (query.isEmpty()) {
+                            IconButton(
+                                onClick = { startVoiceSearch { result -> 
+                                    query = result
+                                    isListening = false
+                                }}
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Mic,
+                                    contentDescription = "Голосовий пошук",
+                                    tint = if (isListening) Color.Red else Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        
+                        // Кнопка очищення
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = {
+                                query = ""
+                                normalized = ""
+                                searchResults = emptyList()
+                                selectedContactId = null
+                                selectedContactName = null
+                                messengerStates = MessengerAvailability()
+                            }) {
+                                Text("✕", fontSize = 18.sp, color = Color.White)
+                            }
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Пульсуючий індикатор під час голосового запису
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isListening,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(600),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "scale"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .background(Color.Red, shape = androidx.compose.foundation.shape.CircleShape)
+                    )
+                    
+                    Spacer(Modifier.width(8.dp))
+                    
+                    Text(
+                        "Слухаю...",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
 
@@ -712,41 +790,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= SEARCH =================
-
-    private suspend fun searchContactsAsync(q: String): List<ContactItem> {
-        return withContext(Dispatchers.IO) {
-            val list = mutableListOf<ContactItem>()
-
-            try {
-                val cursor: Cursor? = contentResolver.query(
-                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                    arrayOf(
-                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                        ContactsContract.CommonDataKinds.Phone.NUMBER
-                    ),
-                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
-                    arrayOf("%$q%", "%$q%"),
-                    null
-                )
-
-                cursor?.use {
-                    while (it.moveToNext()) {
-                        val contactId = it.getLong(0)
-                        val name = it.getString(1)
-                        val number = it.getString(2)
-                        list.add(ContactItem(contactId, name, number))
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            list
-        }
-    }
-
     // ================= ACTIONS =================
 
     private fun copyNumber(num: String) {
@@ -804,5 +847,260 @@ class MainActivity : ComponentActivity() {
         }
 
         return digits
+    }
+
+    // ================= VOICE SEARCH =================
+
+    private fun hasRecordAudioPermission(): Boolean {
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun startVoiceSearch(onResult: (String) -> Unit) {
+        if (!hasRecordAudioPermission()) {
+            Toast.makeText(this, "Потрібен дозвіл на мікрофон", Toast.LENGTH_SHORT).show()
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                PERMISSION_REQUEST_CODE
+            )
+            return
+        }
+
+        // Спочатку пробуємо SpeechRecognizer (Google Services)
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            startSpeechRecognizer(onResult)
+        } else {
+            // Fallback: Intent API для Huawei та інших без Google Services
+            startVoiceSearchIntent()
+        }
+    }
+
+    private var speechRecognizer: SpeechRecognizer? = null
+
+    private fun startSpeechRecognizer(onResult: (String) -> Unit) {
+        try {
+            speechRecognizer?.destroy()
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            }
+
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    android.util.Log.d("CallChooser", "Voice: Ready for speech")
+                }
+
+                override fun onBeginningOfSpeech() {
+                    android.util.Log.d("CallChooser", "Voice: Speech started")
+                }
+
+                override fun onRmsChanged(rmsdB: Float) {}
+
+                override fun onBufferReceived(buffer: ByteArray?) {}
+
+                override fun onEndOfSpeech() {
+                    android.util.Log.d("CallChooser", "Voice: Speech ended")
+                }
+
+                override fun onError(error: Int) {
+                    android.util.Log.e("CallChooser", "Voice: Error $error")
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Помилка розпізнавання голосу",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onResult("")
+                    }
+                }
+
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    if (!matches.isNullOrEmpty()) {
+                        val recognizedText = matches[0]
+                        android.util.Log.d("CallChooser", "Voice: Recognized '$recognizedText'")
+                        runOnUiThread {
+                            onResult(recognizedText)
+                        }
+                    } else {
+                        android.util.Log.w("CallChooser", "Voice: No results")
+                        runOnUiThread {
+                            onResult("")
+                        }
+                    }
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {}
+
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("CallChooser", "Voice: Exception", e)
+            Toast.makeText(this, "Помилка запуску голосового пошуку", Toast.LENGTH_SHORT).show()
+            onResult("")
+        }
+    }
+
+    private fun startVoiceSearchIntent() {
+        try {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажіть ім'я або номер")
+            }
+            startActivityForResult(intent, VOICE_SEARCH_REQUEST_CODE)
+        } catch (e: Exception) {
+            android.util.Log.e("CallChooser", "Voice Intent: Exception", e)
+            Toast.makeText(
+                this,
+                "Голосовий пошук недоступний на цьому пристрої",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == VOICE_SEARCH_REQUEST_CODE && resultCode == RESULT_OK) {
+            val matches = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!matches.isNullOrEmpty()) {
+                val recognizedText = matches[0]
+                android.util.Log.d("CallChooser", "Voice Intent: Recognized '$recognizedText'")
+                
+                // Перезапустити UI з результатом
+                setContent {
+                    MaterialTheme(colorScheme = darkColorScheme()) {
+                        CallChooserUI()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        speechRecognizer?.destroy()
+    }
+
+    // ================= TRANSLITERATION =================
+
+    private fun transliterate(text: String): String {
+        val lowerText = text.lowercase()
+        val result = StringBuilder()
+        
+        val ukrToLat = mapOf(
+            'а' to "a", 'б' to "b", 'в' to "v", 'г' to "h", 'ґ' to "g",
+            'д' to "d", 'е' to "e", 'є' to "ye", 'ж' to "zh", 'з' to "z",
+            'и' to "y", 'і' to "i", 'ї' to "yi", 'й' to "y", 'к' to "k",
+            'л' to "l", 'м' to "m", 'н' to "n", 'о' to "o", 'п' to "p",
+            'р' to "r", 'с' to "s", 'т' to "t", 'у' to "u", 'ф' to "f",
+            'х' to "kh", 'ц' to "ts", 'ч' to "ch", 'ш' to "sh", 'щ' to "shch",
+            'ь' to "", 'ю' to "yu", 'я' to "ya"
+        )
+
+        val latToUkr = mapOf(
+            "a" to 'а', "b" to 'б', "v" to 'в', "h" to 'г', "g" to 'ґ',
+            "d" to 'д', "e" to 'е', "ye" to 'є', "zh" to 'ж', "z" to 'з',
+            "y" to 'и', "i" to 'і', "yi" to 'ї', "k" to 'к',
+            "l" to 'л', "m" to 'м', "n" to 'н', "o" to 'о', "p" to 'п',
+            "r" to 'р', "s" to 'с', "t" to 'т', "u" to 'у', "f" to 'ф',
+            "kh" to 'х', "ts" to 'ц', "ch" to 'ч', "sh" to 'ш', "shch" to 'щ',
+            "yu" to 'ю', "ya" to 'я'
+        )
+
+        // Визначаємо напрямок транслітерації
+        val isCyrillic = lowerText.any { it in 'а'..'я' || it == 'ґ' || it == 'є' || it == 'і' || it == 'ї' }
+
+        if (isCyrillic) {
+            // Кирилиця → Латинка
+            for (char in lowerText) {
+                result.append(ukrToLat[char] ?: char)
+            }
+        } else {
+            // Латинка → Кирилиця (складніше, бо багатосимвольні комбінації)
+            var i = 0
+            while (i < lowerText.length) {
+                var found = false
+                
+                // Спробувати 4-символьні комбінації
+                if (i + 4 <= lowerText.length) {
+                    val fourChars = lowerText.substring(i, i + 4)
+                    latToUkr[fourChars]?.let {
+                        result.append(it)
+                        i += 4
+                        found = true
+                    }
+                }
+                
+                // Спробувати 2-символьні комбінації
+                if (!found && i + 2 <= lowerText.length) {
+                    val twoChars = lowerText.substring(i, i + 2)
+                    latToUkr[twoChars]?.let {
+                        result.append(it)
+                        i += 2
+                        found = true
+                    }
+                }
+                
+                // Спробувати односимвольні
+                if (!found) {
+                    val char = lowerText[i].toString()
+                    result.append(latToUkr[char] ?: lowerText[i])
+                    i++
+                }
+            }
+        }
+
+        return result.toString()
+    }
+
+    // ================= SEARCH WITH TRANSLITERATION =================
+
+    private suspend fun searchContactsAsync(q: String): List<ContactItem> {
+        return withContext(Dispatchers.IO) {
+            val list = mutableListOf<ContactItem>()
+            val transliterated = transliterate(q)
+
+            try {
+                android.util.Log.d("CallChooser", "Search: original='$q', translit='$transliterated'")
+                
+                val cursor: Cursor? = contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    ),
+                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR " +
+                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR " +
+                    "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
+                    arrayOf("%$q%", "%$transliterated%", "%$q%"),
+                    null
+                )
+
+                cursor?.use {
+                    while (it.moveToNext()) {
+                        val contactId = it.getLong(0)
+                        val name = it.getString(1)
+                        val number = it.getString(2)
+                        list.add(ContactItem(contactId, name, number))
+                    }
+                }
+                
+                android.util.Log.d("CallChooser", "Search: found ${list.size} results")
+            } catch (e: Exception) {
+                android.util.Log.e("CallChooser", "Search: Exception", e)
+            }
+
+            list
+        }
     }
 }
