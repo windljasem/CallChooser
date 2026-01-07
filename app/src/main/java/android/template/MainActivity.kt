@@ -49,6 +49,11 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
         private const val VOICE_SEARCH_REQUEST_CODE = 101
+        
+        // Package names месенджерів
+        const val WHATSAPP_PACKAGE = "com.whatsapp"
+        const val TELEGRAM_PACKAGE = "org.telegram.messenger"
+        const val VIBER_PACKAGE = "com.viber.voip"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -694,7 +699,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(RoundedCornerShape(12.dp))
                 .background(bg.copy(alpha = if (enabled) 1f else 0.3f))
                 .combinedClickable(
                     enabled = enabled,
@@ -736,13 +741,6 @@ class MainActivity : ComponentActivity() {
     )
 
     // ================= MESSENGER CHECK =================
-
-    // Package names месенджерів
-    private companion object {
-        const val WHATSAPP_PACKAGE = "com.whatsapp"
-        const val TELEGRAM_PACKAGE = "org.telegram.messenger"
-        const val VIBER_PACKAGE = "com.viber.voip"
-    }
 
     // Перевірка чи встановлений месенджер (PackageManager)
     private fun isMessengerInstalled(packageName: String): Boolean {
