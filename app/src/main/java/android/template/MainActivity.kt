@@ -1,9 +1,13 @@
 package com.callchooser.app
 
 import android.Manifest
+import androidx.compose.foundation.combinedClickable
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -11,25 +15,21 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.CallLog
 import android.provider.ContactsContract
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Запит дозволів
+        // Запит обох дозволів
         requestPermissionsIfNeeded()
 
         setContent {
@@ -102,11 +102,13 @@ class MainActivity : ComponentActivity() {
                 .padding(16.dp)
                 .statusBarsPadding()
         ) {
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = 150.dp)
             ) {
+
                 // Заголовок
                 Text(
                     "Call Chooser",
@@ -246,6 +248,7 @@ class MainActivity : ComponentActivity() {
                     .imePadding()
                     .navigationBarsPadding()
             ) {
+
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
                         StyledButtonWithLongPress(
