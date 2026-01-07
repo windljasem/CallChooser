@@ -205,8 +205,24 @@ class MainActivity : ComponentActivity() {
                         if (query.isEmpty()) {
                             IconButton(
                                 onClick = { startVoiceSearch { result -> 
+                                    android.util.Log.d("CallChooser", "Voice callback: result='$result'")
                                     query = result
+                                    normalized = normalizeNumber(result)
+                                    selectedContactId = null
+                                    selectedContactName = null
+                                    messengerStates = MessengerAvailability()
                                     isListening = false
+                                    
+                                    // Запускаємо пошук автоматично
+                                    if (result.length >= 2) {
+                                        android.util.Log.d("CallChooser", "Voice callback: launching search...")
+                                        scope.launch {
+                                            searchResults = searchContactsAsync(result)
+                                            android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
+                                        }
+                                    } else {
+                                        android.util.Log.d("CallChooser", "Voice callback: query too short, skipping search")
+                                    }
                                 }}
                             ) {
                                 Text(
@@ -1058,13 +1074,65 @@ class MainActivity : ComponentActivity() {
 
     // ================= SEARCH WITH TRANSLITERATION =================
 
+    private fun generateSearchVariants(q: String): List<String> {
+        val variants = mutableListOf<String>()
+        val lowerQuery = q.lowercase()
+        
+        // 1. Оригінал (lowercase)
+        variants.add(lowerQuery)
+        
+        // 2. Стандартна транслітерація
+        val translit = transliterate(lowerQuery)
+        if (translit != lowerQuery) {
+            variants.add(translit)
+        }
+        
+        // 3. Альтернативні варіанти транслітерації
+        // в → w (замість v)
+        if (translit.contains('v')) {
+            variants.add(translit.replace('v', 'w'))
+        }
+        
+        // ч → c (замість ch)
+        if (translit.contains("ch")) {
+            variants.add(translit.replace("ch", "c"))
+        }
+        
+        // х → h або x (замість kh)
+        if (translit.contains("kh")) {
+            variants.add(translit.replace("kh", "h"))
+            variants.add(translit.replace("kh", "x"))
+        }
+        
+        // Комбінація: в→w і ч→c
+        if (translit.contains('v') && translit.contains("ch")) {
+            variants.add(translit.replace('v', 'w').replace("ch", "c"))
+        }
+        
+        android.util.Log.d("CallChooser", "Search variants for '$q': $variants")
+        
+        return variants.distinct()
+    }
+
     private suspend fun searchContactsAsync(q: String): List<ContactItem> {
         return withContext(Dispatchers.IO) {
             val list = mutableListOf<ContactItem>()
-            val transliterated = transliterate(q)
+            val variants = generateSearchVariants(q)
 
             try {
-                android.util.Log.d("CallChooser", "Search: original='$q', translit='$transliterated'")
+                android.util.Log.d("CallChooser", "Search: query='$q', variants=$variants")
+                
+                // Створюємо WHERE clause з усіма варіантами
+                val whereClause = variants.joinToString(" OR ") { 
+                    "LOWER(${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME}) LIKE ?" 
+                } + " OR ${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?"
+                
+                // Створюємо параметри (всі варіанти + номер)
+                val whereArgs = variants.map { "%$it%" }.toMutableList()
+                whereArgs.add("%${q.filter { it.isDigit() }}%")
+                
+                android.util.Log.d("CallChooser", "Search: WHERE=$whereClause")
+                android.util.Log.d("CallChooser", "Search: ARGS=${whereArgs.joinToString()}")
                 
                 val cursor: Cursor? = contentResolver.query(
                     ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -1073,10 +1141,8 @@ class MainActivity : ComponentActivity() {
                         ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                         ContactsContract.CommonDataKinds.Phone.NUMBER
                     ),
-                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR " +
-                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR " +
-                    "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?",
-                    arrayOf("%$q%", "%$transliterated%", "%$q%"),
+                    whereClause,
+                    whereArgs.toTypedArray(),
                     null
                 )
 
@@ -1086,10 +1152,11 @@ class MainActivity : ComponentActivity() {
                         val name = it.getString(1)
                         val number = it.getString(2)
                         list.add(ContactItem(contactId, name, number))
+                        android.util.Log.d("CallChooser", "Search: found '$name'")
                     }
                 }
                 
-                android.util.Log.d("CallChooser", "Search: found ${list.size} results")
+                android.util.Log.d("CallChooser", "Search: total found ${list.size} results")
             } catch (e: Exception) {
                 android.util.Log.e("CallChooser", "Search: Exception", e)
             }
