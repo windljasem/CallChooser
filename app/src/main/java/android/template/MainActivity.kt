@@ -465,12 +465,14 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        StyledButton(
-                            "Telegram",
+                        MessengerButton(
+                            name = "Telegram",
                             bg = Color(0xFFEAF6FD),
                             fg = Color(0xFF229ED9),
-                            enabled = messengerStates.telegram && normalized.isNotEmpty()
-                        ) { openTelegram(normalized) }
+                            isAvailable = messengerStates.telegram,
+                            hasNumber = normalized.isNotEmpty(),
+                            onClick = { openTelegram(normalized) }
+                        )
                     }
                 }
 
@@ -478,20 +480,24 @@ class MainActivity : ComponentActivity() {
 
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.weight(1f).padding(end = 6.dp)) {
-                        StyledButton(
-                            "WhatsApp",
+                        MessengerButton(
+                            name = "WhatsApp",
                             bg = Color(0xFFE9F9EF),
                             fg = Color(0xFF25D366),
-                            enabled = messengerStates.whatsApp && normalized.isNotEmpty()
-                        ) { openWhatsApp(normalized) }
+                            isAvailable = messengerStates.whatsApp,
+                            hasNumber = normalized.isNotEmpty(),
+                            onClick = { openWhatsApp(normalized) }
+                        )
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
-                        StyledButton(
-                            "Viber",
+                        MessengerButton(
+                            name = "Viber",
                             bg = Color(0xFFF0EDFF),
                             fg = Color(0xFF7360F2),
-                            enabled = messengerStates.viber && normalized.isNotEmpty()
-                        ) { openViber(normalized) }
+                            isAvailable = messengerStates.viber,
+                            hasNumber = normalized.isNotEmpty(),
+                            onClick = { openViber(normalized) }
+                        )
                     }
                 }
             }
@@ -607,6 +613,71 @@ class MainActivity : ComponentActivity() {
             shape = RoundedCornerShape(50)
         ) {
             Text(text, fontWeight = FontWeight.SemiBold)
+        }
+    }
+
+    @Composable
+    fun MessengerButton(
+        name: String,
+        bg: Color,
+        fg: Color,
+        isAvailable: Boolean,
+        hasNumber: Boolean,
+        onClick: () -> Unit
+    ) {
+        Button(
+            onClick = onClick,
+            enabled = hasNumber,  // Кнопка активна якщо є номер
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = bg,
+                contentColor = fg,
+                disabledContainerColor = bg.copy(alpha = 0.3f),
+                disabledContentColor = fg.copy(alpha = 0.4f)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    // Індикатор (кільце)
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(
+                                color = if (isAvailable) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                    )
+                    
+                    Spacer(Modifier.width(6.dp))
+                    
+                    // Назва месенджера
+                    Text(
+                        name,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
+                    )
+                }
+                
+                // Статус
+                Text(
+                    if (isAvailable) "online" else "no info",
+                    fontSize = 10.sp,
+                    color = if (isAvailable) 
+                        Color(0xFF2E7D32)  // Темно-зелений
+                    else 
+                        Color(0xFFD32F2F),  // Темно-червоний
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 
