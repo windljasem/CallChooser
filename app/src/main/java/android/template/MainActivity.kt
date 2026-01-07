@@ -737,13 +737,36 @@ class MainActivity : ComponentActivity() {
 
     // ================= MESSENGER CHECK =================
 
+    // Package names месенджерів
+    private companion object {
+        const val WHATSAPP_PACKAGE = "com.whatsapp"
+        const val TELEGRAM_PACKAGE = "org.telegram.messenger"
+        const val VIBER_PACKAGE = "com.viber.voip"
+    }
+
+    // Перевірка чи встановлений месенджер (PackageManager)
+    private fun isMessengerInstalled(packageName: String): Boolean {
+        return try {
+            packageManager.getPackageInfo(packageName, 0)
+            android.util.Log.d("CallChooser", "Package $packageName: INSTALLED")
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            android.util.Log.d("CallChooser", "Package $packageName: NOT FOUND")
+            false
+        }
+    }
+
+    // Перевірка всіх месенджерів (ContactsContract + PackageManager fallback)
     private suspend fun checkAllMessengers(contactId: Long): MessengerAvailability {
         return withContext(Dispatchers.IO) {
             var whatsApp = false
             var telegram = false
             var viber = false
 
+            // Крок 1: Спробувати знайти в ContactsContract (найточніший спосіб)
             try {
+                android.util.Log.d("CallChooser", "Checking ContactsContract for contact $contactId")
+                
                 val cursor = contentResolver.query(
                     ContactsContract.Data.CONTENT_URI,
                     arrayOf(ContactsContract.Data.MIMETYPE),
@@ -765,10 +788,35 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                android.util.Log.d("CallChooser", "Messengers - WA:$whatsApp TG:$telegram VB:$viber")
+                android.util.Log.d("CallChooser", "ContactsContract result - WA:$whatsApp TG:$telegram VB:$viber")
             } catch (e: Exception) {
-                android.util.Log.e("CallChooser", "Error checking messengers", e)
+                android.util.Log.e("CallChooser", "Error checking ContactsContract", e)
             }
+
+            // Крок 2: Fallback на PackageManager для тих що не знайшлись
+            // Це допоможе на Xiaomi MIUI та інших прошивках
+            if (!whatsApp) {
+                whatsApp = isMessengerInstalled(WHATSAPP_PACKAGE)
+                if (whatsApp) {
+                    android.util.Log.d("CallChooser", "WhatsApp detected via PackageManager (MIUI fallback)")
+                }
+            }
+            
+            if (!telegram) {
+                telegram = isMessengerInstalled(TELEGRAM_PACKAGE)
+                if (telegram) {
+                    android.util.Log.d("CallChooser", "Telegram detected via PackageManager (MIUI fallback)")
+                }
+            }
+            
+            if (!viber) {
+                viber = isMessengerInstalled(VIBER_PACKAGE)
+                if (viber) {
+                    android.util.Log.d("CallChooser", "Viber detected via PackageManager (MIUI fallback)")
+                }
+            }
+            
+            android.util.Log.d("CallChooser", "Final result - WA:$whatsApp TG:$telegram VB:$viber")
 
             MessengerAvailability(whatsApp, telegram, viber)
         }
