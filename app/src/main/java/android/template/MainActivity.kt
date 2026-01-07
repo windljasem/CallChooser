@@ -76,6 +76,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            android.util.Log.d("CallChooser", "onRequestPermissionsResult called")
+            
+            permissions.forEachIndexed { index, permission ->
+                val granted = grantResults[index] == PackageManager.PERMISSION_GRANTED
+                android.util.Log.d("CallChooser", "$permission: ${if (granted) "GRANTED" else "DENIED"}")
+            }
+            
+            // Перезапустити UI після надання дозволів
+            android.util.Log.d("CallChooser", "Restarting UI after permission result")
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    CallChooserUI()
+                }
+            }
+        }
+    }
+
     @Composable
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
@@ -85,14 +110,34 @@ class MainActivity : ComponentActivity() {
         var selectedContactId by remember { mutableStateOf<Long?>(null) }
         var selectedContactName by remember { mutableStateOf<String?>(null) }
         var messengerStates by remember { mutableStateOf(MessengerAvailability()) }
+        var isLoadingCalls by remember { mutableStateOf(false) }
         
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
 
         // Завантаження останніх дзвінків при запуску
         LaunchedEffect(Unit) {
+            android.util.Log.d("CallChooser", "LaunchedEffect started")
+            android.util.Log.d("CallChooser", "Has READ_CALL_LOG permission: ${hasCallLogPermission()}")
+            
             if (hasCallLogPermission()) {
+                android.util.Log.d("CallChooser", "Starting to load recent calls...")
+                isLoadingCalls = true
                 recentCalls = loadRecentCallsAsync()
+                isLoadingCalls = false
+                android.util.Log.d("CallChooser", "Loaded ${recentCalls.size} recent calls")
+            } else {
+                android.util.Log.w("CallChooser", "READ_CALL_LOG permission not granted yet")
+            }
+        }
+
+        // Функція для ручного оновлення списку
+        fun refreshRecentCalls() {
+            scope.launch {
+                android.util.Log.d("CallChooser", "Manual refresh triggered")
+                isLoadingCalls = true
+                recentCalls = loadRecentCallsAsync()
+                isLoadingCalls = false
             }
         }
 
@@ -246,7 +291,45 @@ class MainActivity : ComponentActivity() {
                 
                 else -> {
                     // Порожній простір якщо немає ні пошуку ні дзвінків
-                    Spacer(Modifier.weight(1f))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        when {
+                            isLoadingCalls -> {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    "Завантаження дзвінків...",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 14.sp
+                                )
+                            }
+                            
+                            hasCallLogPermission() && query.isEmpty() -> {
+                                Text(
+                                    "Немає останніх дзвінків",
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontSize = 14.sp
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Button(
+                                    onClick = { refreshRecentCalls() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(alpha = 0.2f)
+                                    )
+                                ) {
+                                    Text("🔄 Оновити", color = Color.White)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
