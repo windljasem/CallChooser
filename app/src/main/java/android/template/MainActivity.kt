@@ -155,12 +155,23 @@ class MainActivity : ComponentActivity() {
         
         // Створюємо канал сповіщень
         createNotificationChannel()
+        
+        // Реєструємо спостерігач за CallLog для автоматичних сповіщень
+        registerCallLogObserver()
+        
+        // Очищаємо сповіщення при відкритті програми
+        clearMissedCallNotifications()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CallChooserUI()
             }
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterCallLogObserver()
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -225,6 +236,44 @@ class MainActivity : ComponentActivity() {
 
     // ================= NOTIFICATIONS =================
     
+    // ContentObserver для відстеження нових дзвінків
+    private inner class CallLogObserver : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            super.onChange(selfChange)
+            android.util.Log.d("CallChooser", "CallLog changed, checking for missed calls")
+            
+            // Перевіряємо пропущені дзвінки асинхронно
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                checkMissedCallsForNotification()
+            }
+        }
+    }
+    
+    private var callLogObserver: CallLogObserver? = null
+    
+    private fun registerCallLogObserver() {
+        if (!hasCallLogPermission()) {
+            android.util.Log.w("CallChooser", "Cannot register CallLog observer: no permission")
+            return
+        }
+        
+        callLogObserver = CallLogObserver()
+        contentResolver.registerContentObserver(
+            CallLog.Calls.CONTENT_URI,
+            true,
+            callLogObserver!!
+        )
+        android.util.Log.d("CallChooser", "CallLog observer registered")
+    }
+    
+    private fun unregisterCallLogObserver() {
+        callLogObserver?.let {
+            contentResolver.unregisterContentObserver(it)
+            android.util.Log.d("CallChooser", "CallLog observer unregistered")
+        }
+        callLogObserver = null
+    }
+    
     private fun createNotificationChannel() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val name = "Пропущені дзвінки"
@@ -236,7 +285,7 @@ class MainActivity : ComponentActivity() {
                 lightColor = android.graphics.Color.RED
                 enableVibration(true)
                 setShowBadge(true)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE  // НЕ показувати на lockscreen
             }
             
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -293,13 +342,54 @@ class MainActivity : ComponentActivity() {
             .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
             .setNumber(count)
             .setBadgeIconType(androidx.core.app.NotificationCompat.BADGE_ICON_SMALL)
             .build()
         
         notificationManager.notify(NOTIFICATION_ID, notification)
         android.util.Log.d("CallChooser", "Notification shown: $count missed calls")
+    }
+    
+    private fun clearMissedCallNotifications() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancel(NOTIFICATION_ID)
+        android.util.Log.d("CallChooser", "Cleared missed call notifications")
+    }
+    
+    private fun checkMissedCallsForNotification() {
+        if (!hasCallLogPermission()) {
+            android.util.Log.w("CallChooser", "Cannot check missed calls: no READ_CALL_LOG permission")
+            return
+        }
+        
+        try {
+            val cursor = contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(
+                    CallLog.Calls.TYPE,
+                    CallLog.Calls.NEW,
+                    CallLog.Calls.CACHED_NAME
+                ),
+                "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.NEW} = ?",
+                arrayOf(
+                    CallLog.Calls.MISSED_TYPE.toString(),
+                    "1"
+                ),
+                null
+            )
+            
+            cursor?.use {
+                val missedCount = it.count
+                if (missedCount > 0) {
+                    it.moveToFirst()
+                    val contactName = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME))
+                    showMissedCallNotification(missedCount, contactName)
+                    android.util.Log.d("CallChooser", "Found $missedCount missed calls, showing notification")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CallChooser", "Error checking missed calls for notification", e)
+        }
     }
     
     private fun checkMissedCalls() {
@@ -387,8 +477,8 @@ class MainActivity : ComponentActivity() {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     android.util.Log.d("CallChooser", "ON_RESUME: Reloading recent calls")
+                    clearMissedCallNotifications()  // Очищаємо сповіщення
                     loadRecentCalls()
-                    checkMissedCalls()  // Перевіряємо пропущені дзвінки
                 }
             }
             
@@ -890,6 +980,8 @@ class MainActivity : ComponentActivity() {
         call: RecentCall,
         onClick: () -> Unit
     ) {
+        val isMissed = call.type == CallLog.Calls.MISSED_TYPE
+        
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -902,16 +994,43 @@ class MainActivity : ComponentActivity() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Іконка типу дзвінка
-                Text(
-                    if (call.type == CallLog.Calls.OUTGOING_TYPE) "📤" else "📥",
-                    fontSize = 20.sp,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
+                when (call.type) {
+                    CallLog.Calls.INCOMING_TYPE -> {
+                        // Зелена стрілка вниз (жирна)
+                        Text(
+                            "↓",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50),  // Зелений
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                    CallLog.Calls.OUTGOING_TYPE -> {
+                        // Синя стрілка вверх (жирна)
+                        Text(
+                            "↑",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2196F3),  // Синій
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                    CallLog.Calls.MISSED_TYPE -> {
+                        // Червоне коло
+                        Text(
+                            "●",
+                            fontSize = 20.sp,
+                            color = Color(0xFFF44336),  // Червоний
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                }
                 
                 Column(modifier = Modifier.weight(1f)) {
+                    // Ім'я або номер (червоний для пропущених)
                     Text(
                         call.name ?: call.number,
-                        color = Color.White,
+                        color = if (isMissed) Color(0xFFF44336) else Color.White,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     )
@@ -921,7 +1040,10 @@ class MainActivity : ComponentActivity() {
                         Text(
                             call.number,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = if (isMissed) 
+                                Color(0xFFF44336).copy(alpha = 0.7f) 
+                            else 
+                                Color.White.copy(alpha = 0.6f),
                             fontSize = 13.sp
                         )
                     }
@@ -930,7 +1052,10 @@ class MainActivity : ComponentActivity() {
                     Text(
                         call.formattedDate,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = if (isMissed) 
+                            Color(0xFFF44336).copy(alpha = 0.6f) 
+                        else 
+                            Color.White.copy(alpha = 0.5f),
                         fontSize = 12.sp
                     )
                 }
@@ -1187,10 +1312,11 @@ class MainActivity : ComponentActivity() {
                         CallLog.Calls.DATE,
                         CallLog.Calls.TYPE
                     ),
-                    "${CallLog.Calls.TYPE} IN (?,?)",
+                    "${CallLog.Calls.TYPE} IN (?,?,?)",
                     arrayOf(
                         CallLog.Calls.INCOMING_TYPE.toString(),
-                        CallLog.Calls.OUTGOING_TYPE.toString()
+                        CallLog.Calls.OUTGOING_TYPE.toString(),
+                        CallLog.Calls.MISSED_TYPE.toString()
                     ),
                     "${CallLog.Calls.DATE} DESC"
                 )
