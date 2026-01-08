@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Дозвіл на читання контактів -->
+    <!-- Дозволи -->
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
-    
-    <!-- Дозвіл на читання історії дзвінків -->
     <uses-permission android:name="android.permission.READ_CALL_LOG"/>
-    
-    <!-- Дозвіл на запис аудіо для голосового пошуку -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:allowBackup="true"
@@ -20,7 +17,8 @@
 
         <activity
             android:name="com.callchooser.app.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
