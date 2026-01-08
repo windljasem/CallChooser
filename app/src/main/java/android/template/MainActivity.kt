@@ -48,8 +48,26 @@ import java.util.*
 class MainActivity : ComponentActivity() {
 
     // Поточна локалізація (оновлюється з UI)
-    private var currentLanguage: Language = Language.UK
-    private var currentStrings: Strings = getStrings(Language.UK)
+    private var currentLanguage: Language = Language.EN  // Default = EN
+    private var currentStrings: Strings = getStrings(Language.EN)
+    
+    // ================= LANGUAGE PREFERENCES =================
+    
+    private fun saveLanguage(language: Language) {
+        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("language", language.name).apply()
+        android.util.Log.d("CallChooser", "Language saved: $language")
+    }
+    
+    private fun loadLanguage(): Language {
+        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
+        val languageName = prefs.getString("language", Language.EN.name) // Default = EN
+        return try {
+            Language.valueOf(languageName ?: Language.EN.name)
+        } catch (e: Exception) {
+            Language.EN
+        }
+    }
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
@@ -145,6 +163,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Завантажуємо збережену мову (default = EN)
+        currentLanguage = loadLanguage()
+        currentStrings = getStrings(currentLanguage)
+        android.util.Log.d("CallChooser", "Loaded language: $currentLanguage")
+
         // Запит обох дозволів
         requestPermissionsIfNeeded()
 
@@ -218,15 +241,17 @@ class MainActivity : ComponentActivity() {
         var messengerStates by remember { mutableStateOf(MessengerAvailability()) }
         var isLoadingCalls by remember { mutableStateOf(false) }
         var isListening by remember { mutableStateOf(false) }
-        var currentLanguage by remember { mutableStateOf(Language.UK) }
+        var currentLanguage by remember { mutableStateOf(this@MainActivity.currentLanguage) }  // Читаємо збережене значення
         var showVersionDialog by remember { mutableStateOf(false) }
         
         val strings = getStrings(currentLanguage)
         
-        // Оновлюємо currentStrings при зміні мови (для Toast повідомлень)
+        // Зберігаємо мову при зміні
         LaunchedEffect(currentLanguage) {
             this@MainActivity.currentLanguage = currentLanguage
             currentStrings = strings
+            saveLanguage(currentLanguage)  // Зберігаємо в SharedPreferences
+            android.util.Log.d("CallChooser", "Language changed to: $currentLanguage")
         }
         
         val scope = rememberCoroutineScope()
