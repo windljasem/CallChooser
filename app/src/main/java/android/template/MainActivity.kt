@@ -2,6 +2,7 @@ package com.callchooser.app
 
 import android.Manifest
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -46,6 +47,9 @@ import java.util.*
 
 class MainActivity : ComponentActivity() {
 
+    // Поточна локалізація (оновлюється з UI)
+    private var currentStrings: Strings = getStrings(Language.UK)
+
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
         private const val VOICE_SEARCH_REQUEST_CODE = 101
@@ -54,6 +58,70 @@ class MainActivity : ComponentActivity() {
         const val WHATSAPP_PACKAGE = "com.whatsapp"
         const val TELEGRAM_PACKAGE = "org.telegram.messenger"
         const val VIBER_PACKAGE = "com.viber.voip"
+    }
+
+    // ================= LOCALIZATION =================
+    
+    enum class Language {
+        UK, EN
+    }
+    
+    data class Strings(
+        val appName: String,
+        val searchHint: String,
+        val listening: String,
+        val found: String,
+        val recentCalls: String,
+        val loadingCalls: String,
+        val noRecentCalls: String,
+        val refresh: String,
+        val online: String,
+        val noInfo: String,
+        // Toast messages
+        val recordAudioPermissionNeeded: String,
+        val voiceRecognitionError: String,
+        val voiceRecognitionUnavailable: String,
+        val messengerUnavailable: String,
+        val numberCopied: String
+    )
+    
+    private fun getStrings(language: Language): Strings {
+        return when (language) {
+            Language.UK -> Strings(
+                appName = "Call Chooser",
+                searchHint = "Ім'я або номер",
+                listening = "Слухаю...",
+                found = "Знайдено",
+                recentCalls = "Останні дзвінки",
+                loadingCalls = "Завантаження дзвінків...",
+                noRecentCalls = "Немає останніх дзвінків",
+                refresh = "🔄 Оновити",
+                online = "online",
+                noInfo = "no info",
+                recordAudioPermissionNeeded = "Потрібен дозвіл на мікрофон",
+                voiceRecognitionError = "Помилка розпізнавання голосу",
+                voiceRecognitionUnavailable = "Голосовий пошук недоступний на цьому пристрої",
+                messengerUnavailable = "Месенджер недоступний, відкриваю GSM",
+                numberCopied = "Номер скопійовано"
+            )
+            Language.EN -> Strings(
+                appName = "Call Chooser",
+                searchHint = "Name or number",
+                listening = "Listening...",
+                found = "Found",
+                recentCalls = "Recent calls",
+                loadingCalls = "Loading calls...",
+                noRecentCalls = "No recent calls",
+                refresh = "🔄 Refresh",
+                online = "online",
+                noInfo = "no info",
+                recordAudioPermissionNeeded = "Microphone permission needed",
+                voiceRecognitionError = "Voice recognition error",
+                voiceRecognitionUnavailable = "Voice search unavailable on this device",
+                messengerUnavailable = "Messenger unavailable, opening GSM",
+                numberCopied = "Number copied"
+            )
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,6 +199,14 @@ class MainActivity : ComponentActivity() {
         var messengerStates by remember { mutableStateOf(MessengerAvailability()) }
         var isLoadingCalls by remember { mutableStateOf(false) }
         var isListening by remember { mutableStateOf(false) }
+        var currentLanguage by remember { mutableStateOf(Language.UK) }
+        
+        val strings = getStrings(currentLanguage)
+        
+        // Оновлюємо currentStrings при зміні мови (для Toast повідомлень)
+        LaunchedEffect(currentLanguage) {
+            currentStrings = strings
+        }
         
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
@@ -185,17 +261,81 @@ class MainActivity : ComponentActivity() {
                 .statusBarsPadding()
         ) {
 
-            // Динамічний заголовок: ім'я контакта або назва програми
-            Text(
-                text = selectedContactName ?: "Call Chooser",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Light,
-                color = Color.White.copy(alpha = 0.9f),
-                letterSpacing = 2.sp,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+            // Заголовок з кнопками мови
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Динамічний заголовок: ім'я контакта або назва програми
+                Text(
+                    text = selectedContactName ?: strings.appName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.95f),
+                    letterSpacing = 1.sp,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Кнопки перемикання мови
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Кнопка UK
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (currentLanguage == Language.UK) 
+                                    Color.White.copy(alpha = 0.3f) 
+                                else 
+                                    Color.Transparent
+                            )
+                            .clickable { currentLanguage = Language.UK },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "UK",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = if (currentLanguage == Language.UK) 
+                                FontWeight.Bold 
+                            else 
+                                FontWeight.Normal
+                        )
+                    }
+                    
+                    // Кнопка EN
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (currentLanguage == Language.EN) 
+                                    Color.White.copy(alpha = 0.3f) 
+                                else 
+                                    Color.Transparent
+                            )
+                            .clickable { currentLanguage = Language.EN },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "EN",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = if (currentLanguage == Language.EN) 
+                                FontWeight.Bold 
+                            else 
+                                FontWeight.Normal
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
 
@@ -217,7 +357,7 @@ class MainActivity : ComponentActivity() {
                         searchResults = emptyList()
                     }
                 },
-                label = { Text("Ім'я або номер") },
+                label = { Text(strings.searchHint) },
                 textStyle = LocalTextStyle.current.copy(
                     color = Color.White,
                     fontSize = 17.sp,
@@ -313,7 +453,7 @@ class MainActivity : ComponentActivity() {
                     Spacer(Modifier.width(8.dp))
                     
                     Text(
-                        "Слухаю...",
+                        strings.listening,
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
@@ -328,7 +468,7 @@ class MainActivity : ComponentActivity() {
                 searchResults.isNotEmpty() -> {
                     // Показуємо результати пошуку
                     Text(
-                        "Знайдено: ${searchResults.size}",
+                        "${strings.found}: ${searchResults.size}",
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -370,7 +510,7 @@ class MainActivity : ComponentActivity() {
                 query.isEmpty() && recentCalls.isNotEmpty() -> {
                     // Показуємо останні дзвінки
                     Text(
-                        "Останні дзвінки",
+                        strings.recentCalls,
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -423,7 +563,7 @@ class MainActivity : ComponentActivity() {
                                 )
                                 Spacer(Modifier.height(16.dp))
                                 Text(
-                                    "Завантаження дзвінків...",
+                                    strings.loadingCalls,
                                     color = Color.White.copy(alpha = 0.7f),
                                     fontSize = 14.sp
                                 )
@@ -431,7 +571,7 @@ class MainActivity : ComponentActivity() {
                             
                             hasCallLogPermission() && query.isEmpty() -> {
                                 Text(
-                                    "Немає останніх дзвінків",
+                                    strings.noRecentCalls,
                                     color = Color.White.copy(alpha = 0.5f),
                                     fontSize = 14.sp
                                 )
@@ -442,7 +582,7 @@ class MainActivity : ComponentActivity() {
                                         containerColor = Color.White.copy(alpha = 0.2f)
                                     )
                                 ) {
-                                    Text("🔄 Оновити", color = Color.White)
+                                    Text(strings.refresh, color = Color.White)
                                 }
                             }
                         }
@@ -476,6 +616,7 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF229ED9),
                             isAvailable = messengerStates.telegram,
                             hasNumber = normalized.isNotEmpty(),
+                            strings = strings,
                             onClick = { openTelegram(normalized) }
                         )
                     }
@@ -491,6 +632,7 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF25D366),
                             isAvailable = messengerStates.whatsApp,
                             hasNumber = normalized.isNotEmpty(),
+                            strings = strings,
                             onClick = { openWhatsApp(normalized) }
                         )
                     }
@@ -501,6 +643,7 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF7360F2),
                             isAvailable = messengerStates.viber,
                             hasNumber = normalized.isNotEmpty(),
+                            strings = strings,
                             onClick = { openViber(normalized) }
                         )
                     }
@@ -628,6 +771,7 @@ class MainActivity : ComponentActivity() {
         fg: Color,
         isAvailable: Boolean,
         hasNumber: Boolean,
+        strings: Strings,
         onClick: () -> Unit
     ) {
         Button(
@@ -674,7 +818,7 @@ class MainActivity : ComponentActivity() {
                 
                 // Статус
                 Text(
-                    if (isAvailable) "online" else "no info",
+                    if (isAvailable) strings.online else strings.noInfo,
                     fontSize = 10.sp,
                     color = if (isAvailable) 
                         Color(0xFF2E7D32)  // Темно-зелений
@@ -949,7 +1093,7 @@ class MainActivity : ComponentActivity() {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("phone", "+$num"))
 
-        Toast.makeText(this, "+$num скопійовано", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, currentStrings.numberCopied, Toast.LENGTH_SHORT).show()
     }
 
     private fun openGsm(num: String) {
@@ -979,7 +1123,7 @@ class MainActivity : ComponentActivity() {
             intent.setPackage(pkg)
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Месенджер недоступний, відкриваю GSM", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, currentStrings.messengerUnavailable, Toast.LENGTH_SHORT).show()
             openGsm(num)
         }
     }
@@ -1009,7 +1153,7 @@ class MainActivity : ComponentActivity() {
 
     private fun startVoiceSearch(onResult: (String) -> Unit) {
         if (!hasRecordAudioPermission()) {
-            Toast.makeText(this, "Потрібен дозвіл на мікрофон", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, currentStrings.recordAudioPermissionNeeded, Toast.LENGTH_SHORT).show()
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -1063,7 +1207,7 @@ class MainActivity : ComponentActivity() {
                     runOnUiThread {
                         Toast.makeText(
                             this@MainActivity,
-                            "Помилка розпізнавання голосу",
+                            currentStrings.voiceRecognitionError,
                             Toast.LENGTH_SHORT
                         ).show()
                         onResult("")
@@ -1094,7 +1238,7 @@ class MainActivity : ComponentActivity() {
             speechRecognizer?.startListening(intent)
         } catch (e: Exception) {
             android.util.Log.e("CallChooser", "Voice: Exception", e)
-            Toast.makeText(this, "Помилка запуску голосового пошуку", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, currentStrings.voiceRecognitionError, Toast.LENGTH_SHORT).show()
             onResult("")
         }
     }
@@ -1111,7 +1255,7 @@ class MainActivity : ComponentActivity() {
             android.util.Log.e("CallChooser", "Voice Intent: Exception", e)
             Toast.makeText(
                 this,
-                "Голосовий пошук недоступний на цьому пристрої",
+                currentStrings.voiceRecognitionUnavailable,
                 Toast.LENGTH_LONG
             ).show()
         }
