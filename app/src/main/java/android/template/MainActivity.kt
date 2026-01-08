@@ -207,6 +207,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // ================= RECENT CALLS =================
+    @Composable
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
         var normalized by remember { mutableStateOf("") }
@@ -222,7 +223,7 @@ class MainActivity : ComponentActivity() {
         
         val strings = getStrings(currentLanguage)
         
-        // Синхронізуємо мову з Activity для Toast повідомлень та сповіщень
+        // Оновлюємо currentStrings при зміні мови (для Toast повідомлень)
         LaunchedEffect(currentLanguage) {
             this@MainActivity.currentLanguage = currentLanguage
             currentStrings = strings
