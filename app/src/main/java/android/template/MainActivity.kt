@@ -2,6 +2,8 @@ package com.callchooser.app
 
 import android.Manifest
 import android.app.PendingIntent
+import android.content.DialogInterface
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import android.content.ClipData
@@ -229,7 +231,7 @@ class MainActivity : ComponentActivity() {
     private fun showVersionDialog() {
         val strings = getStrings(currentLanguage)
         
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle(strings.aboutApp)
             .setMessage("""
                 ${strings.appName}
@@ -237,7 +239,7 @@ class MainActivity : ComponentActivity() {
                 ${strings.version}: $APP_VERSION
                 ${strings.releaseDate}: $RELEASE_DATE
             """.trimIndent())
-            .setPositiveButton(strings.close) { dialog, _ -> 
+            .setPositiveButton(strings.close) { dialog: DialogInterface, _: Int -> 
                 dialog.dismiss() 
             }
             .show()
