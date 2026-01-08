@@ -1,7 +1,6 @@
 package com.callchooser.app
 
 import android.Manifest
-import android.app.PendingIntent
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import android.content.ClipData
@@ -64,10 +63,6 @@ class MainActivity : ComponentActivity() {
         // Версія програми
         const val APP_VERSION = "1.0"
         const val RELEASE_DATE = "08.01.2026"
-        
-        // Notification
-        const val NOTIFICATION_CHANNEL_ID = "missed_calls_channel"
-        const val NOTIFICATION_ID = 1001
     }
 
     // ================= LOCALIZATION =================
@@ -152,15 +147,6 @@ class MainActivity : ComponentActivity() {
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
-        
-        // Створюємо канал сповіщень
-        createNotificationChannel()
-        
-        // Реєструємо спостерігач за CallLog для автоматичних сповіщень
-        registerCallLogObserver()
-        
-        // Очищаємо сповіщення при відкритті програми
-        clearMissedCallNotifications()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -188,15 +174,6 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             permissions.add(Manifest.permission.RECORD_AUDIO)
-        }
-        
-        // POST_NOTIFICATIONS для Android 13+
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
         }
         
         if (permissions.isNotEmpty()) {
@@ -229,201 +206,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= NOTIFICATIONS =================
-    
-    // ContentObserver для відстеження нових дзвінків
-    private inner class CallLogObserver : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-        override fun onChange(selfChange: Boolean) {
-            super.onChange(selfChange)
-            android.util.Log.d("CallChooser", "CallLog changed, checking for missed calls")
-            
-            // Перевіряємо пропущені дзвінки асинхронно
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                checkMissedCallsForNotification()
-            }
-        }
-    }
-    
-    private var callLogObserver: CallLogObserver? = null
-    
-    private fun registerCallLogObserver() {
-        if (!hasCallLogPermission()) {
-            android.util.Log.w("CallChooser", "Cannot register CallLog observer: no permission")
-            return
-        }
-        
-        callLogObserver = CallLogObserver()
-        contentResolver.registerContentObserver(
-            CallLog.Calls.CONTENT_URI,
-            true,
-            callLogObserver!!
-        )
-        android.util.Log.d("CallChooser", "CallLog observer registered")
-    }
-    
-    private fun unregisterCallLogObserver() {
-        callLogObserver?.let {
-            contentResolver.unregisterContentObserver(it)
-            android.util.Log.d("CallChooser", "CallLog observer unregistered")
-        }
-        callLogObserver = null
-    }
-    
-    private fun createNotificationChannel() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val name = "Пропущені дзвінки"
-            val descriptionText = "Сповіщення про пропущені дзвінки"
-            val importance = android.app.NotificationManager.IMPORTANCE_HIGH
-            val channel = android.app.NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-                enableLights(true)
-                lightColor = android.graphics.Color.RED
-                enableVibration(true)
-                setShowBadge(true)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE  // НЕ показувати на lockscreen
-            }
-            
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            notificationManager.createNotificationChannel(channel)
-            
-            android.util.Log.d("CallChooser", "Notification channel created")
-        }
-    }
-    
-    private fun showMissedCallNotification(count: Int, contactName: String?) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        
-        // Перевірка дозволу на сповіщення (Android 13+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (androidx.core.app.ActivityCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                android.util.Log.w("CallChooser", "POST_NOTIFICATIONS permission not granted")
-                return
-            }
-        }
-        
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this, 
-            0, 
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        
-        val strings = getStrings(currentLanguage)
-        val title = if (count == 1) {
-            if (contactName != null) {
-                if (currentLanguage == Language.UK) "Пропущений дзвінок від $contactName" 
-                else "Missed call from $contactName"
-            } else {
-                if (currentLanguage == Language.UK) "Пропущений дзвінок" 
-                else "Missed call"
-            }
-        } else {
-            if (currentLanguage == Language.UK) "Пропущених дзвінків: $count" 
-            else "Missed calls: $count"
-        }
-        
-        val notification = androidx.core.app.NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_call)
-            .setContentTitle(title)
-            .setContentText(if (currentLanguage == Language.UK) "Торкніться щоб відкрити" else "Tap to open")
-            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
-            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setNumber(count)
-            .setBadgeIconType(androidx.core.app.NotificationCompat.BADGE_ICON_SMALL)
-            .build()
-        
-        notificationManager.notify(NOTIFICATION_ID, notification)
-        android.util.Log.d("CallChooser", "Notification shown: $count missed calls")
-    }
-    
-    private fun clearMissedCallNotifications() {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        notificationManager.cancel(NOTIFICATION_ID)
-        android.util.Log.d("CallChooser", "Cleared missed call notifications")
-    }
-    
-    private fun checkMissedCallsForNotification() {
-        if (!hasCallLogPermission()) {
-            android.util.Log.w("CallChooser", "Cannot check missed calls: no READ_CALL_LOG permission")
-            return
-        }
-        
-        try {
-            val cursor = contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(
-                    CallLog.Calls.TYPE,
-                    CallLog.Calls.NEW,
-                    CallLog.Calls.CACHED_NAME
-                ),
-                "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.NEW} = ?",
-                arrayOf(
-                    CallLog.Calls.MISSED_TYPE.toString(),
-                    "1"
-                ),
-                null
-            )
-            
-            cursor?.use {
-                val missedCount = it.count
-                if (missedCount > 0) {
-                    it.moveToFirst()
-                    val contactName = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME))
-                    showMissedCallNotification(missedCount, contactName)
-                    android.util.Log.d("CallChooser", "Found $missedCount missed calls, showing notification")
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("CallChooser", "Error checking missed calls for notification", e)
-        }
-    }
-    
-    private fun checkMissedCalls() {
-        if (!hasCallLogPermission()) {
-            android.util.Log.w("CallChooser", "Cannot check missed calls: no READ_CALL_LOG permission")
-            return
-        }
-        
-        try {
-            val cursor = contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(
-                    CallLog.Calls.TYPE,
-                    CallLog.Calls.NEW,
-                    CallLog.Calls.CACHED_NAME
-                ),
-                "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.NEW} = ?",
-                arrayOf(
-                    CallLog.Calls.MISSED_TYPE.toString(),
-                    "1"
-                ),
-                null
-            )
-            
-            cursor?.use {
-                val missedCount = it.count
-                if (missedCount > 0) {
-                    it.moveToFirst()
-                    val contactName = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME))
-                    showMissedCallNotification(missedCount, contactName)
-                    android.util.Log.d("CallChooser", "Found $missedCount missed calls")
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("CallChooser", "Error checking missed calls", e)
-        }
-    }
-
-    @Composable
+    // ================= RECENT CALLS =================
     fun CallChooserUI() {
         var query by remember { mutableStateOf("") }
         var normalized by remember { mutableStateOf("") }
@@ -472,7 +255,6 @@ class MainActivity : ComponentActivity() {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     android.util.Log.d("CallChooser", "ON_RESUME: Reloading recent calls")
-                    clearMissedCallNotifications()  // Очищаємо сповіщення
                     loadRecentCalls()
                 }
             }
@@ -1603,7 +1385,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterCallLogObserver()
         speechRecognizer?.destroy()
     }
 
