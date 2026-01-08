@@ -2,8 +2,6 @@ package com.callchooser.app
 
 import android.Manifest
 import android.app.PendingIntent
-import android.content.DialogInterface
-import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import android.content.ClipData
@@ -51,6 +49,7 @@ import java.util.*
 class MainActivity : ComponentActivity() {
 
     // Поточна локалізація (оновлюється з UI)
+    private var currentLanguage: Language = Language.UK
     private var currentStrings: Strings = getStrings(Language.UK)
 
     companion object {
@@ -224,27 +223,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ================= VERSION DIALOG =================
-    
-    private var currentLanguage = Language.UK
-    
-    private fun showVersionDialog() {
-        val strings = getStrings(currentLanguage)
-        
-        AlertDialog.Builder(this)
-            .setTitle(strings.aboutApp)
-            .setMessage("""
-                ${strings.appName}
-                
-                ${strings.version}: $APP_VERSION
-                ${strings.releaseDate}: $RELEASE_DATE
-            """.trimIndent())
-            .setPositiveButton(strings.close) { dialog: DialogInterface, _: Int -> 
-                dialog.dismiss() 
-            }
-            .show()
-    }
-    
     // ================= NOTIFICATIONS =================
     
     private fun createNotificationChannel() {
@@ -372,10 +350,11 @@ class MainActivity : ComponentActivity() {
         var isLoadingCalls by remember { mutableStateOf(false) }
         var isListening by remember { mutableStateOf(false) }
         var currentLanguage by remember { mutableStateOf(Language.UK) }
+        var showVersionDialog by remember { mutableStateOf(false) }
         
         val strings = getStrings(currentLanguage)
         
-        // Синхронізуємо мову з Activity для Toast повідомлень та діалогів
+        // Синхронізуємо мову з Activity для Toast повідомлень та сповіщень
         LaunchedEffect(currentLanguage) {
             this@MainActivity.currentLanguage = currentLanguage
             currentStrings = strings
@@ -457,7 +436,7 @@ class MainActivity : ComponentActivity() {
                         .clickable { 
                             // Показуємо діалог тільки якщо це назва програми, не ім'я контакта
                             if (selectedContactName == null) {
-                                showVersionDialog()
+                                showVersionDialog = true
                             }
                         }
                 )
@@ -829,6 +808,46 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+            
+            // Діалог версії програми
+            if (showVersionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showVersionDialog = false },
+                    title = {
+                        Text(
+                            text = strings.aboutApp,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Column {
+                            Text(
+                                text = strings.appName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            
+                            Spacer(Modifier.height(16.dp))
+                            
+                            Text(
+                                text = "${strings.version}: $APP_VERSION",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            
+                            Text(
+                                text = "${strings.releaseDate}: $RELEASE_DATE",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showVersionDialog = false }) {
+                            Text(strings.close)
+                        }
+                    }
+                )
             }
         }
     }
