@@ -1132,12 +1132,16 @@ class MainActivity : ComponentActivity() {
                         if (normalized in seenNumbers) continue
                         seenNumbers.add(normalized)
 
-                        val name = it.getString(1)
+                        val cachedName = it.getString(1)  // Стара назва з CallLog
                         val timestamp = it.getLong(2)
                         val type = it.getInt(3)
                         
-                        // Отримуємо contactId якщо контакт існує
+                        // Отримуємо contactId та актуальне ім'я з ContactsContract
                         val contactId = getContactIdByNumber(normalized)
+                        val actualName = getContactNameByNumber(normalized)
+                        
+                        // Використовуємо актуальне ім'я, якщо знайдено, інакше CACHED_NAME
+                        val name = actualName ?: cachedName
                         
                         list.add(
                             RecentCall(
@@ -1180,6 +1184,31 @@ class MainActivity : ComponentActivity() {
             cursor?.use {
                 if (it.moveToFirst()) {
                     it.getLong(0)
+                } else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    private fun getContactNameByNumber(normalizedNumber: String): String? {
+        return try {
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode("+$normalizedNumber")
+            )
+            
+            val cursor = contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )
+            
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    it.getString(0)
                 } else null
             }
         } catch (e: Exception) {
