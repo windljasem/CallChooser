@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
         val loadingCalls: String,
         val noRecentCalls: String,
         val refresh: String,
-        val online: String,
-        val noInfo: String,
+        val available: String,
+        val notDefined: String,
         // Toast messages
         val recordAudioPermissionNeeded: String,
         val voiceRecognitionError: String,
@@ -106,8 +106,8 @@ class MainActivity : ComponentActivity() {
                 loadingCalls = "Завантаження дзвінків...",
                 noRecentCalls = "Немає останніх дзвінків",
                 refresh = "🔄 Оновити",
-                online = "online",
-                noInfo = "no info",
+                available = "доступний",
+                notDefined = "не визначено",
                 recordAudioPermissionNeeded = "Потрібен дозвіл на мікрофон",
                 voiceRecognitionError = "Помилка розпізнавання голосу",
                 voiceRecognitionUnavailable = "Голосовий пошук недоступний на цьому пристрої",
@@ -127,8 +127,8 @@ class MainActivity : ComponentActivity() {
                 loadingCalls = "Loading calls...",
                 noRecentCalls = "No recent calls",
                 refresh = "🔄 Refresh",
-                online = "online",
-                noInfo = "no info",
+                available = "available",
+                notDefined = "not defined",
                 recordAudioPermissionNeeded = "Microphone permission needed",
                 voiceRecognitionError = "Voice recognition error",
                 voiceRecognitionUnavailable = "Voice search unavailable on this device",
@@ -147,10 +147,54 @@ class MainActivity : ComponentActivity() {
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
+        
+        // Створюємо ярлик на робочому столі (тільки при першому запуску)
+        createHomeScreenShortcut()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CallChooserUI()
+            }
+        }
+    }
+    
+    // ================= HOME SCREEN SHORTCUT =================
+    
+    private fun createHomeScreenShortcut() {
+        // Перевіряємо чи вже створювали ярлик
+        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
+        val shortcutCreated = prefs.getBoolean("shortcut_created", false)
+        
+        if (shortcutCreated) {
+            android.util.Log.d("CallChooser", "Shortcut already created, skipping")
+            return
+        }
+        
+        // Створюємо ярлик для Android 8.0+ (API 26+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val shortcutManager = getSystemService(android.content.pm.ShortcutManager::class.java)
+            
+            if (shortcutManager?.isRequestPinShortcutSupported == true) {
+                val pinShortcutInfo = android.content.pm.ShortcutInfo.Builder(this, "call_chooser_shortcut")
+                    .setShortLabel("Call Chooser")
+                    .setLongLabel("Call Chooser")
+                    .setIcon(android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_launcher))
+                    .setIntent(Intent(this, MainActivity::class.java).apply {
+                        action = Intent.ACTION_MAIN
+                    })
+                    .build()
+                
+                try {
+                    shortcutManager.requestPinShortcut(pinShortcutInfo, null)
+                    
+                    // Зберігаємо що ярлик створено
+                    prefs.edit().putBoolean("shortcut_created", true).apply()
+                    android.util.Log.d("CallChooser", "Home screen shortcut requested")
+                } catch (e: Exception) {
+                    android.util.Log.e("CallChooser", "Error creating shortcut", e)
+                }
+            } else {
+                android.util.Log.d("CallChooser", "Pin shortcut not supported on this device")
             }
         }
     }
@@ -523,7 +567,8 @@ class MainActivity : ComponentActivity() {
                                     // Перевірка месенджерів
                                     if (contact.id != 0L) {
                                         scope.launch {
-                                            messengerStates = checkAllMessengers(contact.id)
+                                            val phoneNum = normalizeNumber(contact.number)
+                                            messengerStates = checkAllMessengers(contact.id, phoneNum)
                                         }
                                     }
                                 },
@@ -565,7 +610,7 @@ class MainActivity : ComponentActivity() {
                                     // Перевірка месенджерів
                                     if (call.contactId != null && call.contactId != 0L) {
                                         scope.launch {
-                                            messengerStates = checkAllMessengers(call.contactId)
+                                            messengerStates = checkAllMessengers(call.contactId, call.normalizedNumber)
                                         }
                                     }
                                 }
@@ -921,12 +966,12 @@ class MainActivity : ComponentActivity() {
                 
                 // Статус
                 Text(
-                    if (isAvailable) strings.online else strings.noInfo,
+                    if (isAvailable) strings.available else strings.notDefined,
                     fontSize = 10.sp,
                     color = if (isAvailable) 
-                        Color(0xFF2E7D32)  // Темно-зелений
+                        Color(0xFF2E7D32)  // Темно-зелений для available
                     else 
-                        Color(0xFFD32F2F),  // Темно-червоний
+                        Color(0xFFD32F2F),  // Темно-червоний для not defined
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -989,6 +1034,24 @@ class MainActivity : ComponentActivity() {
 
     // ================= MESSENGER CHECK =================
 
+    // Перевірка чи можна відкрити месенджер з цим номером (Intent Resolver)
+    private fun canOpenInMessenger(phoneNumber: String, messengerPackage: String): Boolean {
+        return try {
+            // Спробувати відкрити через tel: intent
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("tel:$phoneNumber")
+                setPackage(messengerPackage)
+            }
+            
+            val canOpen = intent.resolveActivity(packageManager) != null
+            android.util.Log.d("CallChooser", "Intent resolver for $messengerPackage with $phoneNumber: $canOpen")
+            canOpen
+        } catch (e: Exception) {
+            android.util.Log.e("CallChooser", "Error checking intent for $messengerPackage", e)
+            false
+        }
+    }
+
     // Перевірка чи встановлений месенджер (PackageManager)
     private fun isMessengerInstalled(packageName: String): Boolean {
         return try {
@@ -1001,14 +1064,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Перевірка всіх месенджерів (ContactsContract + PackageManager fallback)
-    private suspend fun checkAllMessengers(contactId: Long): MessengerAvailability {
+    // Перевірка всіх месенджерів (ContactsContract + Intent Resolver)
+    private suspend fun checkAllMessengers(contactId: Long, phoneNumber: String = ""): MessengerAvailability {
         return withContext(Dispatchers.IO) {
             var whatsApp = false
             var telegram = false
             var viber = false
 
-            // Крок 1: Спробувати знайти в ContactsContract (найточніший спосіб)
+            // Крок 1: Спробувати знайти в ContactsContract (100% точність)
             try {
                 android.util.Log.d("CallChooser", "Checking ContactsContract for contact $contactId")
                 
@@ -1038,26 +1101,26 @@ class MainActivity : ComponentActivity() {
                 android.util.Log.e("CallChooser", "Error checking ContactsContract", e)
             }
 
-            // Крок 2: Fallback на PackageManager для тих що не знайшлись
-            // Це допоможе на Xiaomi MIUI та інших прошивках
-            if (!whatsApp) {
-                whatsApp = isMessengerInstalled(WHATSAPP_PACKAGE)
+            // Крок 2: Intent Resolver для тих що не знайшлись (точніше ніж PackageManager)
+            // Перевіряємо чи можна відкрити месенджер з цим номером
+            if (!whatsApp && phoneNumber.isNotEmpty()) {
+                whatsApp = canOpenInMessenger(phoneNumber, WHATSAPP_PACKAGE)
                 if (whatsApp) {
-                    android.util.Log.d("CallChooser", "WhatsApp detected via PackageManager (MIUI fallback)")
+                    android.util.Log.d("CallChooser", "WhatsApp available via Intent Resolver")
                 }
             }
             
-            if (!telegram) {
-                telegram = isMessengerInstalled(TELEGRAM_PACKAGE)
+            if (!telegram && phoneNumber.isNotEmpty()) {
+                telegram = canOpenInMessenger(phoneNumber, TELEGRAM_PACKAGE)
                 if (telegram) {
-                    android.util.Log.d("CallChooser", "Telegram detected via PackageManager (MIUI fallback)")
+                    android.util.Log.d("CallChooser", "Telegram available via Intent Resolver")
                 }
             }
             
-            if (!viber) {
-                viber = isMessengerInstalled(VIBER_PACKAGE)
+            if (!viber && phoneNumber.isNotEmpty()) {
+                viber = canOpenInMessenger(phoneNumber, VIBER_PACKAGE)
                 if (viber) {
-                    android.util.Log.d("CallChooser", "Viber detected via PackageManager (MIUI fallback)")
+                    android.util.Log.d("CallChooser", "Viber available via Intent Resolver")
                 }
             }
             
