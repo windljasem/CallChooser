@@ -168,11 +168,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterCallLogObserver()
-    }
 
     private fun requestPermissionsIfNeeded() {
         val permissions = mutableListOf<String>()
@@ -1608,6 +1603,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterCallLogObserver()
         speechRecognizer?.destroy()
     }
 
