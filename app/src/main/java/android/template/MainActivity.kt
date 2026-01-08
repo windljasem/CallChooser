@@ -147,54 +147,10 @@ class MainActivity : ComponentActivity() {
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
-        
-        // Створюємо ярлик на робочому столі (тільки при першому запуску)
-        createHomeScreenShortcut()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CallChooserUI()
-            }
-        }
-    }
-    
-    // ================= HOME SCREEN SHORTCUT =================
-    
-    private fun createHomeScreenShortcut() {
-        // Перевіряємо чи вже створювали ярлик
-        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
-        val shortcutCreated = prefs.getBoolean("shortcut_created", false)
-        
-        if (shortcutCreated) {
-            android.util.Log.d("CallChooser", "Shortcut already created, skipping")
-            return
-        }
-        
-        // Створюємо ярлик для Android 8.0+ (API 26+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val shortcutManager = getSystemService(android.content.pm.ShortcutManager::class.java)
-            
-            if (shortcutManager?.isRequestPinShortcutSupported == true) {
-                val pinShortcutInfo = android.content.pm.ShortcutInfo.Builder(this, "call_chooser_shortcut")
-                    .setShortLabel("Call Chooser")
-                    .setLongLabel("Call Chooser")
-                    .setIcon(android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_launcher))
-                    .setIntent(Intent(this, MainActivity::class.java).apply {
-                        action = Intent.ACTION_MAIN
-                    })
-                    .build()
-                
-                try {
-                    shortcutManager.requestPinShortcut(pinShortcutInfo, null)
-                    
-                    // Зберігаємо що ярлик створено
-                    prefs.edit().putBoolean("shortcut_created", true).apply()
-                    android.util.Log.d("CallChooser", "Home screen shortcut requested")
-                } catch (e: Exception) {
-                    android.util.Log.e("CallChooser", "Error creating shortcut", e)
-                }
-            } else {
-                android.util.Log.d("CallChooser", "Pin shortcut not supported on this device")
             }
         }
     }
