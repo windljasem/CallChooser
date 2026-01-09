@@ -219,7 +219,7 @@ class MainActivity : ComponentActivity() {
                 outgoingCall = Color(0xFF03A9F4),      // Material Light Blue (оновлено)
                 missedCall = Color(0xFFFF9800),        // Material Orange (оновлено)
                 messengerAvailable = Color(0xFF2E7D32),    // Темно-зелений
-                messengerNotDefined = Color(0xFFD32F2F)    // Темно-червоний
+                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
             )
             Theme.LIGHT -> ThemeColors(
                 background = Color(0xFFFFFBFE),
@@ -234,7 +234,7 @@ class MainActivity : ComponentActivity() {
                 outgoingCall = Color(0xFF0277BD),      // Темно-синій
                 missedCall = Color(0xFFE65100),        // Темно-помаранчевий
                 messengerAvailable = Color(0xFF1B5E20),    // Дуже темно-зелений
-                messengerNotDefined = Color(0xFFB71C1C)    // Дуже темно-червоний
+                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
             )
             Theme.BLUE -> ThemeColors(
                 background = Color(0xFF0D1B2A),        // Темно-синій
@@ -249,7 +249,7 @@ class MainActivity : ComponentActivity() {
                 outgoingCall = Color(0xFF29B6F6),      // Яскраво-блакитний
                 missedCall = Color(0xFFFFB74D),        // Світло-помаранчевий
                 messengerAvailable = Color(0xFF66BB6A),    // Світло-зелений
-                messengerNotDefined = Color(0xFFEF5350)    // Світло-червоний
+                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
             )
         }
     }
@@ -712,6 +712,7 @@ class MainActivity : ComponentActivity() {
                         items(recentCalls) { call ->
                             RecentCallCard(
                                 call = call,
+                                theme = theme,
                                 onClick = {
                                     selectedContactName = call.name
                                     query = call.number
@@ -802,6 +803,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.telegram,
                             hasNumber = normalized.isNotEmpty(),
                             strings = strings,
+                            theme = theme,
                             onClick = { openTelegram(normalized) }
                         )
                     }
@@ -818,6 +820,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.whatsApp,
                             hasNumber = normalized.isNotEmpty(),
                             strings = strings,
+                            theme = theme,
                             onClick = { openWhatsApp(normalized) }
                         )
                     }
@@ -829,6 +832,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.viber,
                             hasNumber = normalized.isNotEmpty(),
                             strings = strings,
+                            theme = theme,
                             onClick = { openViber(normalized) }
                         )
                     }
@@ -913,7 +917,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun RecentCallCard(
         call: RecentCall,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        theme: ThemeColors
     ) {
         val isMissed = call.type == CallLog.Calls.MISSED_TYPE
         
@@ -1032,6 +1037,7 @@ class MainActivity : ComponentActivity() {
         isAvailable: Boolean,
         hasNumber: Boolean,
         strings: Strings,
+        theme: ThemeColors,
         onClick: () -> Unit
     ) {
         Button(
