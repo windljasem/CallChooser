@@ -52,8 +52,8 @@ class MainActivity : ComponentActivity() {
     private var currentStrings: Strings = getStrings(Language.EN)
     
     // Поточна тема (оновлюється з UI)
-    private var currentTheme: Theme = Theme.DARK  // Default = DARK
-    private var currentThemeColors: ThemeColors = getThemeColors(Theme.DARK)
+    private var currentTheme: Theme = Theme.DEFAULT  // Default = DEFAULT (синя)
+    private var currentThemeColors: ThemeColors = getThemeColors(Theme.DEFAULT)
     
     // ================= LANGUAGE PREFERENCES =================
     
@@ -83,11 +83,11 @@ class MainActivity : ComponentActivity() {
     
     private fun loadTheme(): Theme {
         val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
-        val themeName = prefs.getString("theme", Theme.DARK.name) // Default = DARK
+        val themeName = prefs.getString("theme", Theme.DEFAULT.name) // Default = DEFAULT
         return try {
-            Theme.valueOf(themeName ?: Theme.DARK.name)
+            Theme.valueOf(themeName ?: Theme.DEFAULT.name)
         } catch (e: Exception) {
-            Theme.DARK
+            Theme.DEFAULT
         }
     }
 
@@ -185,7 +185,9 @@ class MainActivity : ComponentActivity() {
     // ================= THEMES =================
     
     enum class Theme {
-        DARK, LIGHT, BLUE  // Можна легко додавати нові теми
+        DEFAULT,  // Синя тема (дефолт)
+        DARK,     // Темна тема
+        LIGHT     // Світла тема
     }
     
     data class ThemeColors(
@@ -206,8 +208,23 @@ class MainActivity : ComponentActivity() {
     
     private fun getThemeColors(theme: Theme): ThemeColors {
         return when (theme) {
+            Theme.DEFAULT -> ThemeColors(
+                background = Color(0xFF2C5E86),           // Синьо-сірий (з скріна) ✅
+                surface = Color(0xFF3D6B99),
+                primary = Color(0xFF6750A4),
+                onPrimary = Color.White,
+                secondary = Color(0xFF625B71),
+                onSecondary = Color.White,
+                textPrimary = Color.White,
+                textSecondary = Color.White.copy(alpha = 0.7f),
+                incomingCall = Color(0xFF4CAF50),         // Зелений
+                outgoingCall = Color(0xFF03A9F4),         // Material Light Blue ✅
+                missedCall = Color(0xFFFF9800),           // Material Orange ✅
+                messengerAvailable = Color(0xFF2E7D32),   // Темно-зелений
+                messengerNotDefined = Color(0xFFFF9800)   // Material Orange ✅
+            )
             Theme.DARK -> ThemeColors(
-                background = Color(0xFF1C1B1F),
+                background = Color(0xFF1C1B1F),           // Темно-сірий
                 surface = Color(0xFF2B2930),
                 primary = Color(0xFF6750A4),
                 onPrimary = Color.White,
@@ -215,41 +232,26 @@ class MainActivity : ComponentActivity() {
                 onSecondary = Color.White,
                 textPrimary = Color.White,
                 textSecondary = Color.White.copy(alpha = 0.7f),
-                incomingCall = Color(0xFF4CAF50),      // Зелений
-                outgoingCall = Color(0xFF03A9F4),      // Material Light Blue (оновлено)
-                missedCall = Color(0xFFFF9800),        // Material Orange (оновлено)
-                messengerAvailable = Color(0xFF2E7D32),    // Темно-зелений
-                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
+                incomingCall = Color(0xFF4CAF50),         // Зелений
+                outgoingCall = Color(0xFF03A9F4),         // Material Light Blue
+                missedCall = Color(0xFFFF9800),           // Material Orange
+                messengerAvailable = Color(0xFF2E7D32),   // Темно-зелений
+                messengerNotDefined = Color(0xFFFF9800)   // Material Orange ✅
             )
             Theme.LIGHT -> ThemeColors(
-                background = Color(0xFFFFFBFE),
-                surface = Color(0xFFF3EDF7),
+                background = Color(0xFFF0FFFF),           // Light cyan ✅
+                surface = Color(0xFFFFF5EE),              // Seashell (плитки) ✅
                 primary = Color(0xFF6750A4),
                 onPrimary = Color.White,
                 secondary = Color(0xFF625B71),
                 onSecondary = Color.White,
-                textPrimary = Color(0xFF1C1B1F),
+                textPrimary = Color(0xFF1C1B1F),          // Темний текст
                 textSecondary = Color(0xFF1C1B1F).copy(alpha = 0.7f),
-                incomingCall = Color(0xFF2E7D32),      // Темно-зелений
-                outgoingCall = Color(0xFF0277BD),      // Темно-синій
-                missedCall = Color(0xFFE65100),        // Темно-помаранчевий
-                messengerAvailable = Color(0xFF1B5E20),    // Дуже темно-зелений
-                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
-            )
-            Theme.BLUE -> ThemeColors(
-                background = Color(0xFF0D1B2A),        // Темно-синій
-                surface = Color(0xFF1B263B),
-                primary = Color(0xFF415A77),
-                onPrimary = Color.White,
-                secondary = Color(0xFF778DA9),
-                onSecondary = Color.White,
-                textPrimary = Color(0xFFE0E1DD),
-                textSecondary = Color(0xFFE0E1DD).copy(alpha = 0.7f),
-                incomingCall = Color(0xFF4CAF50),      // Зелений
-                outgoingCall = Color(0xFF29B6F6),      // Яскраво-блакитний
-                missedCall = Color(0xFFFFB74D),        // Світло-помаранчевий
-                messengerAvailable = Color(0xFF66BB6A),    // Світло-зелений
-                messengerNotDefined = Color(0xFFFF9800)    // Material Orange (оновлено)
+                incomingCall = Color(0xFF2E7D32),         // Темно-зелений
+                outgoingCall = Color(0xFF0277BD),         // Темно-синій
+                missedCall = Color(0xFFE65100),           // Темно-помаранчевий
+                messengerAvailable = Color(0xFF1B5E20),   // Дуже темно-зелений
+                messengerNotDefined = Color(0xFFFF9800)   // Material Orange
             )
         }
     }
@@ -262,7 +264,7 @@ class MainActivity : ComponentActivity() {
         currentStrings = getStrings(currentLanguage)
         android.util.Log.d("CallChooser", "Loaded language: $currentLanguage")
         
-        // Завантажуємо збережену тему (default = DARK)
+        // Завантажуємо збережену тему (default = DEFAULT - синя)
         currentTheme = loadTheme()
         currentThemeColors = getThemeColors(currentTheme)
         android.util.Log.d("CallChooser", "Loaded theme: $currentTheme")
@@ -504,11 +506,11 @@ class MainActivity : ComponentActivity() {
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.White.copy(alpha = 0.15f))
                             .clickable { 
-                                // Циклічне перемикання тем: DARK → LIGHT → BLUE → DARK
+                                // Циклічне перемикання: DEFAULT → DARK → LIGHT → DEFAULT
                                 currentTheme = when (currentTheme) {
+                                    Theme.DEFAULT -> Theme.DARK
                                     Theme.DARK -> Theme.LIGHT
-                                    Theme.LIGHT -> Theme.BLUE
-                                    Theme.BLUE -> Theme.DARK
+                                    Theme.LIGHT -> Theme.DEFAULT
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -596,7 +598,7 @@ class MainActivity : ComponentActivity() {
                                 selectedContactName = null
                                 messengerStates = MessengerAvailability()
                             }) {
-                                Text("✕", fontSize = 18.sp, color = Color.White)
+                                Text("✕", fontSize = 18.sp, color = theme.textPrimary)
                             }
                         }
                     }
@@ -668,6 +670,7 @@ class MainActivity : ComponentActivity() {
                         items(searchResults) { contact ->
                             ContactCard(
                                 contact = contact,
+                                theme = theme,
                                 onClick = {
                                     selectedContactName = contact.name
                                     query = contact.number
@@ -885,7 +888,8 @@ class MainActivity : ComponentActivity() {
     fun ContactCard(
         contact: ContactItem,
         onClick: () -> Unit,
-        onLongClick: () -> Unit
+        onLongClick: () -> Unit,
+        theme: ThemeColors
     ) {
         Surface(
             modifier = Modifier
@@ -894,13 +898,13 @@ class MainActivity : ComponentActivity() {
                     onClick = onClick,
                     onLongClick = onLongClick
                 ),
-            color = Color.White.copy(alpha = 0.1f),
+            color = theme.surface.copy(alpha = 0.7f),  // Використовуємо theme.surface
             shape = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     contact.name,
-                    color = Color.White,
+                    color = theme.textPrimary,
                     fontWeight = FontWeight.Medium,
                     fontSize = 16.sp
                 )
@@ -908,7 +912,7 @@ class MainActivity : ComponentActivity() {
                 Text(
                     contact.number,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = theme.textSecondary
                 )
             }
         }
@@ -926,7 +930,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = onClick),
-            color = Color.White.copy(alpha = 0.1f),
+            color = theme.surface.copy(alpha = 0.7f),  // Використовуємо theme.surface
             shape = RoundedCornerShape(8.dp)
         ) {
             Row(
@@ -1049,7 +1053,7 @@ class MainActivity : ComponentActivity() {
             colors = ButtonDefaults.buttonColors(
                 containerColor = bg,
                 contentColor = fg,
-                disabledContainerColor = bg.copy(alpha = 0.3f),
+                disabledContainerColor = theme.surface,  // Використовуємо theme.surface (#FFF5EE для світлої)
                 disabledContentColor = fg.copy(alpha = 0.4f)
             ),
             shape = RoundedCornerShape(12.dp)
