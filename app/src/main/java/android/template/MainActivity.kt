@@ -51,6 +51,10 @@ class MainActivity : ComponentActivity() {
     private var currentLanguage: Language = Language.EN  // Default = EN
     private var currentStrings: Strings = getStrings(Language.EN)
     
+    // Поточна тема (оновлюється з UI)
+    private var currentTheme: Theme = Theme.DARK  // Default = DARK
+    private var currentThemeColors: ThemeColors = getThemeColors(Theme.DARK)
+    
     // ================= LANGUAGE PREFERENCES =================
     
     private fun saveLanguage(language: Language) {
@@ -66,6 +70,24 @@ class MainActivity : ComponentActivity() {
             Language.valueOf(languageName ?: Language.EN.name)
         } catch (e: Exception) {
             Language.EN
+        }
+    }
+    
+    // ================= THEME PREFERENCES =================
+    
+    private fun saveTheme(theme: Theme) {
+        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("theme", theme.name).apply()
+        android.util.Log.d("CallChooser", "Theme saved: $theme")
+    }
+    
+    private fun loadTheme(): Theme {
+        val prefs = getSharedPreferences("CallChooserPrefs", Context.MODE_PRIVATE)
+        val themeName = prefs.getString("theme", Theme.DARK.name) // Default = DARK
+        return try {
+            Theme.valueOf(themeName ?: Theme.DARK.name)
+        } catch (e: Exception) {
+            Theme.DARK
         }
     }
 
@@ -159,6 +181,78 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+    
+    // ================= THEMES =================
+    
+    enum class Theme {
+        DARK, LIGHT, BLUE  // Можна легко додавати нові теми
+    }
+    
+    data class ThemeColors(
+        val background: Color,
+        val surface: Color,
+        val primary: Color,
+        val onPrimary: Color,
+        val secondary: Color,
+        val onSecondary: Color,
+        val textPrimary: Color,
+        val textSecondary: Color,
+        val incomingCall: Color,     // Вхідний дзвінок (зелена стрілка)
+        val outgoingCall: Color,     // Вихідний дзвінок (голуба стрілка)
+        val missedCall: Color,        // Пропущений дзвінок (помаранчевий)
+        val messengerAvailable: Color,   // Статус "available"
+        val messengerNotDefined: Color   // Статус "not defined"
+    )
+    
+    private fun getThemeColors(theme: Theme): ThemeColors {
+        return when (theme) {
+            Theme.DARK -> ThemeColors(
+                background = Color(0xFF1C1B1F),
+                surface = Color(0xFF2B2930),
+                primary = Color(0xFF6750A4),
+                onPrimary = Color.White,
+                secondary = Color(0xFF625B71),
+                onSecondary = Color.White,
+                textPrimary = Color.White,
+                textSecondary = Color.White.copy(alpha = 0.7f),
+                incomingCall = Color(0xFF4CAF50),      // Зелений
+                outgoingCall = Color(0xFF03A9F4),      // Material Light Blue (оновлено)
+                missedCall = Color(0xFFFF9800),        // Material Orange (оновлено)
+                messengerAvailable = Color(0xFF2E7D32),    // Темно-зелений
+                messengerNotDefined = Color(0xFFD32F2F)    // Темно-червоний
+            )
+            Theme.LIGHT -> ThemeColors(
+                background = Color(0xFFFFFBFE),
+                surface = Color(0xFFF3EDF7),
+                primary = Color(0xFF6750A4),
+                onPrimary = Color.White,
+                secondary = Color(0xFF625B71),
+                onSecondary = Color.White,
+                textPrimary = Color(0xFF1C1B1F),
+                textSecondary = Color(0xFF1C1B1F).copy(alpha = 0.7f),
+                incomingCall = Color(0xFF2E7D32),      // Темно-зелений
+                outgoingCall = Color(0xFF0277BD),      // Темно-синій
+                missedCall = Color(0xFFE65100),        // Темно-помаранчевий
+                messengerAvailable = Color(0xFF1B5E20),    // Дуже темно-зелений
+                messengerNotDefined = Color(0xFFB71C1C)    // Дуже темно-червоний
+            )
+            Theme.BLUE -> ThemeColors(
+                background = Color(0xFF0D1B2A),        // Темно-синій
+                surface = Color(0xFF1B263B),
+                primary = Color(0xFF415A77),
+                onPrimary = Color.White,
+                secondary = Color(0xFF778DA9),
+                onSecondary = Color.White,
+                textPrimary = Color(0xFFE0E1DD),
+                textSecondary = Color(0xFFE0E1DD).copy(alpha = 0.7f),
+                incomingCall = Color(0xFF4CAF50),      // Зелений
+                outgoingCall = Color(0xFF29B6F6),      // Яскраво-блакитний
+                missedCall = Color(0xFFFFB74D),        // Світло-помаранчевий
+                messengerAvailable = Color(0xFF66BB6A),    // Світло-зелений
+                messengerNotDefined = Color(0xFFEF5350)    // Світло-червоний
+            )
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -167,6 +261,11 @@ class MainActivity : ComponentActivity() {
         currentLanguage = loadLanguage()
         currentStrings = getStrings(currentLanguage)
         android.util.Log.d("CallChooser", "Loaded language: $currentLanguage")
+        
+        // Завантажуємо збережену тему (default = DARK)
+        currentTheme = loadTheme()
+        currentThemeColors = getThemeColors(currentTheme)
+        android.util.Log.d("CallChooser", "Loaded theme: $currentTheme")
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
@@ -242,9 +341,11 @@ class MainActivity : ComponentActivity() {
         var isLoadingCalls by remember { mutableStateOf(false) }
         var isListening by remember { mutableStateOf(false) }
         var currentLanguage by remember { mutableStateOf(this@MainActivity.currentLanguage) }  // Читаємо збережене значення
+        var currentTheme by remember { mutableStateOf(this@MainActivity.currentTheme) }  // Читаємо збережену тему
         var showVersionDialog by remember { mutableStateOf(false) }
         
         val strings = getStrings(currentLanguage)
+        val theme = getThemeColors(currentTheme)
         
         // Зберігаємо мову при зміні
         LaunchedEffect(currentLanguage) {
@@ -252,6 +353,14 @@ class MainActivity : ComponentActivity() {
             currentStrings = strings
             saveLanguage(currentLanguage)  // Зберігаємо в SharedPreferences
             android.util.Log.d("CallChooser", "Language changed to: $currentLanguage")
+        }
+        
+        // Зберігаємо тему при зміні
+        LaunchedEffect(currentTheme) {
+            this@MainActivity.currentTheme = currentTheme
+            currentThemeColors = theme
+            saveTheme(currentTheme)  // Зберігаємо в SharedPreferences
+            android.util.Log.d("CallChooser", "Theme changed to: $currentTheme")
         }
         
         val scope = rememberCoroutineScope()
@@ -302,7 +411,7 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF2C5E86))
+                .background(theme.background)
                 .padding(16.dp)
                 .statusBarsPadding()
         ) {
@@ -320,7 +429,7 @@ class MainActivity : ComponentActivity() {
                     text = selectedContactName ?: strings.appName,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.95f),
+                    color = theme.textPrimary,
                     letterSpacing = 1.sp,
                     maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -334,7 +443,7 @@ class MainActivity : ComponentActivity() {
                         }
                 )
                 
-                // Кнопки перемикання мови
+                // Кнопки перемикання мови та теми
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -354,7 +463,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text(
                             "UK",
-                            color = Color.White,
+                            color = theme.textPrimary,
                             fontSize = 14.sp,
                             fontWeight = if (currentLanguage == Language.UK) 
                                 FontWeight.Bold 
@@ -379,12 +488,34 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text(
                             "EN",
-                            color = Color.White,
+                            color = theme.textPrimary,
                             fontSize = 14.sp,
                             fontWeight = if (currentLanguage == Language.EN) 
                                 FontWeight.Bold 
                             else 
                                 FontWeight.Normal
+                        )
+                    }
+                    
+                    // Кнопка зміни теми
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .clickable { 
+                                // Циклічне перемикання тем: DARK → LIGHT → BLUE → DARK
+                                currentTheme = when (currentTheme) {
+                                    Theme.DARK -> Theme.LIGHT
+                                    Theme.LIGHT -> Theme.BLUE
+                                    Theme.BLUE -> Theme.DARK
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "🎨",
+                            fontSize = 20.sp
                         )
                     }
                 }
@@ -412,7 +543,7 @@ class MainActivity : ComponentActivity() {
                 },
                 label = { Text(strings.searchHint) },
                 textStyle = LocalTextStyle.current.copy(
-                    color = Color.White,
+                    color = theme.textPrimary,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Normal
                 ),
@@ -805,36 +936,36 @@ class MainActivity : ComponentActivity() {
                             "↓",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4CAF50),  // Зелений
+                            color = theme.incomingCall,  // Зелений
                             modifier = Modifier.padding(end = 12.dp)
                         )
                     }
                     CallLog.Calls.OUTGOING_TYPE -> {
-                        // Синя стрілка вверх (жирна)
+                        // Голуба стрілка вверх (жирна)
                         Text(
                             "↑",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2196F3),  // Синій
+                            color = theme.outgoingCall,  // Material Light Blue
                             modifier = Modifier.padding(end = 12.dp)
                         )
                     }
                     CallLog.Calls.MISSED_TYPE -> {
-                        // Червоне коло
+                        // Помаранчеве коло
                         Text(
                             "●",
                             fontSize = 20.sp,
-                            color = Color(0xFFF44336),  // Червоний
+                            color = theme.missedCall,  // Material Orange
                             modifier = Modifier.padding(end = 12.dp)
                         )
                     }
                 }
                 
                 Column(modifier = Modifier.weight(1f)) {
-                    // Ім'я або номер (червоний для пропущених)
+                    // Ім'я або номер (помаранчевий для пропущених)
                     Text(
                         call.name ?: call.number,
-                        color = if (isMissed) Color(0xFFF44336) else Color.White,
+                        color = if (isMissed) theme.missedCall else theme.textPrimary,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     )
@@ -845,9 +976,9 @@ class MainActivity : ComponentActivity() {
                             call.number,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isMissed) 
-                                Color(0xFFF44336).copy(alpha = 0.7f) 
+                                theme.missedCall.copy(alpha = 0.7f) 
                             else 
-                                Color.White.copy(alpha = 0.6f),
+                                theme.textSecondary,
                             fontSize = 13.sp
                         )
                     }
@@ -857,9 +988,9 @@ class MainActivity : ComponentActivity() {
                         call.formattedDate,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isMissed) 
-                            Color(0xFFF44336).copy(alpha = 0.6f) 
+                            theme.missedCall.copy(alpha = 0.6f) 
                         else 
-                            Color.White.copy(alpha = 0.5f),
+                            theme.textSecondary.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
                 }
@@ -950,9 +1081,9 @@ class MainActivity : ComponentActivity() {
                     if (isAvailable) strings.available else strings.notDefined,
                     fontSize = 10.sp,
                     color = if (isAvailable) 
-                        Color(0xFF2E7D32)  // Темно-зелений для available
+                        theme.messengerAvailable
                     else 
-                        Color(0xFFD32F2F),  // Темно-червоний для not defined
+                        theme.messengerNotDefined,
                     fontWeight = FontWeight.Medium
                 )
             }
