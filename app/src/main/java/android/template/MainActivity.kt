@@ -239,8 +239,8 @@ class MainActivity : ComponentActivity() {
                 messengerNotDefined = Color(0xFFFF9800)   // Material Orange ✅
             )
             Theme.LIGHT -> ThemeColors(
-                background = Color(0xFFF0FFFF),           // Light cyan ✅
-                surface = Color(0xFFFFF5EE),              // Seashell (плитки) ✅
+                background = Color(0xFFBEBEBE),           // Сірий ✅
+                surface = Color(0xFFF7E7CE),              // Бежевий ✅
                 primary = Color(0xFF6750A4),
                 onPrimary = Color.White,
                 secondary = Color(0xFF625B71),
@@ -516,8 +516,9 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "🎨",
-                            fontSize = 20.sp
+                            "◐",
+                            fontSize = 24.sp,
+                            color = theme.textPrimary
                         )
                     }
                 }
