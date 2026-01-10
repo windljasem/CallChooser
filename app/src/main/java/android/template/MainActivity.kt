@@ -545,6 +545,15 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 label = { Text(strings.searchHint) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = theme.textPrimary,
+                    unfocusedTextColor = theme.textPrimary,
+                    focusedLabelColor = theme.textPrimary,
+                    unfocusedLabelColor = theme.textPrimary,
+                    cursorColor = theme.textPrimary,
+                    focusedBorderColor = theme.textPrimary.copy(alpha = 0.5f),
+                    unfocusedBorderColor = theme.textSecondary
+                ),
                 textStyle = LocalTextStyle.current.copy(
                     color = theme.textPrimary,
                     fontSize = 17.sp,
@@ -700,7 +709,7 @@ class MainActivity : ComponentActivity() {
                     // Показуємо останні дзвінки
                     Text(
                         strings.recentCalls,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = theme.textSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -1384,24 +1393,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun formatCallDate(timestamp: Long): String {
-        val calendar = Calendar.getInstance()
-        val now = calendar.timeInMillis
-        val diff = now - timestamp
-
-        calendar.timeInMillis = timestamp
-
-        return when {
-            diff < 60_000 -> "Щойно"
-            diff < 3_600_000 -> "${diff / 60_000} хв тому"
-            diff < 86_400_000 -> {
-                val hours = diff / 3_600_000
-                if (hours == 1L) "Годину тому" else "$hours год тому"
-            }
-            else -> {
-                val dateFormat = SimpleDateFormat("d MMM, HH:mm", Locale("uk"))
-                dateFormat.format(Date(timestamp))
-            }
-        }
+        val dateFormat = SimpleDateFormat("dd.MM.yy HH:mm", Locale.US)
+        return dateFormat.format(Date(timestamp))
     }
 
     // ================= ACTIONS =================
