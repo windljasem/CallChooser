@@ -14,6 +14,8 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.speech.RecognizerIntent
@@ -1484,72 +1486,99 @@ class MainActivity : ComponentActivity() {
     }
 
     private var speechRecognizer: SpeechRecognizer? = null
+    private var isRecognizing = false
 
     private fun startSpeechRecognizer(onResult: (String) -> Unit) {
+        // Запобігаємо повторному запуску
+        if (isRecognizing) {
+            android.util.Log.w("CallChooser", "Voice: Already recognizing, ignoring request")
+            return
+        }
+        
+        isRecognizing = true
+        
         try {
+            // Очищаємо старий recognizer
             speechRecognizer?.destroy()
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer = null
+            
+            // Невелика затримка для гарантії завершення
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            }
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                        putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    }
 
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    android.util.Log.d("CallChooser", "Voice: Ready for speech")
-                }
+                    speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(params: Bundle?) {
+                            android.util.Log.d("CallChooser", "Voice: Ready for speech")
+                        }
 
-                override fun onBeginningOfSpeech() {
-                    android.util.Log.d("CallChooser", "Voice: Speech started")
-                }
+                        override fun onBeginningOfSpeech() {
+                            android.util.Log.d("CallChooser", "Voice: Speech started")
+                        }
 
-                override fun onRmsChanged(rmsdB: Float) {}
+                        override fun onRmsChanged(rmsdB: Float) {}
 
-                override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onBufferReceived(buffer: ByteArray?) {}
 
-                override fun onEndOfSpeech() {
-                    android.util.Log.d("CallChooser", "Voice: Speech ended")
-                }
+                        override fun onEndOfSpeech() {
+                            android.util.Log.d("CallChooser", "Voice: Speech ended")
+                        }
 
-                override fun onError(error: Int) {
-                    android.util.Log.e("CallChooser", "Voice: Error $error")
+                        override fun onError(error: Int) {
+                            android.util.Log.e("CallChooser", "Voice: Error $error")
+                            isRecognizing = false
+                            runOnUiThread {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    currentStrings.voiceRecognitionError,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                onResult("")
+                            }
+                        }
+
+                        override fun onResults(results: Bundle?) {
+                            isRecognizing = false
+                            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            if (!matches.isNullOrEmpty()) {
+                                val recognizedText = matches[0]
+                                android.util.Log.d("CallChooser", "Voice: Recognized '$recognizedText'")
+                                runOnUiThread {
+                                    onResult(recognizedText)
+                                }
+                            } else {
+                                android.util.Log.w("CallChooser", "Voice: No results")
+                                runOnUiThread {
+                                    onResult("")
+                                }
+                            }
+                        }
+
+                        override fun onPartialResults(partialResults: Bundle?) {}
+
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                    })
+
+                    speechRecognizer?.startListening(intent)
+                } catch (e: Exception) {
+                    android.util.Log.e("CallChooser", "Voice: Exception in delayed start", e)
+                    isRecognizing = false
                     runOnUiThread {
-                        Toast.makeText(
-                            this@MainActivity,
-                            currentStrings.voiceRecognitionError,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(this, currentStrings.voiceRecognitionError, Toast.LENGTH_SHORT).show()
                         onResult("")
                     }
                 }
-
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        val recognizedText = matches[0]
-                        android.util.Log.d("CallChooser", "Voice: Recognized '$recognizedText'")
-                        runOnUiThread {
-                            onResult(recognizedText)
-                        }
-                    } else {
-                        android.util.Log.w("CallChooser", "Voice: No results")
-                        runOnUiThread {
-                            onResult("")
-                        }
-                    }
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) {}
-
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-
-            speechRecognizer?.startListening(intent)
+            }, 150)  // 150ms затримка
         } catch (e: Exception) {
             android.util.Log.e("CallChooser", "Voice: Exception", e)
+            isRecognizing = false
             Toast.makeText(this, currentStrings.voiceRecognitionError, Toast.LENGTH_SHORT).show()
             onResult("")
         }
@@ -1684,26 +1713,118 @@ class MainActivity : ComponentActivity() {
             variants.add(translit)
         }
         
-        // 3. Альтернативні варіанти транслітерації
-        // в → w (замість v)
-        if (translit.contains('v')) {
-            variants.add(translit.replace('v', 'w'))
+        // 3. МАКСИМАЛЬНО ГНУЧКІ альтернативи транслітерації
+        
+        // г → h (стандарт) ↔ g (популярно)
+        if (translit.contains('h') && !translit.contains("ch") && !translit.contains("kh") && !translit.contains("sh")) {
+            // herasym → gerasym
+            variants.add(translit.replace('h', 'g'))
+        }
+        if (lowerQuery.contains('g') && !lowerQuery.any { it in 'а'..'я' }) {
+            // gerasym → herasym (зворотня транслітерація)
+            variants.add(lowerQuery.replace('g', 'h'))
         }
         
-        // ч → c (замість ch)
-        if (translit.contains("ch")) {
-            variants.add(translit.replace("ch", "c"))
-        }
-        
-        // х → h або x (замість kh)
+        // х → kh (стандарт) ↔ h (популярно) ↔ x (рідко)
         if (translit.contains("kh")) {
+            // mykhaylo → myhaylo, myxaylo
             variants.add(translit.replace("kh", "h"))
             variants.add(translit.replace("kh", "x"))
         }
+        if (lowerQuery.contains('h') && !lowerQuery.any { it in 'а'..'я' }) {
+            // hrin → khrin (зворотня)
+            variants.add(lowerQuery.replace("h", "kh"))
+        }
+        if (lowerQuery.contains('x') && !lowerQuery.any { it in 'а'..'я' }) {
+            // xrin → khrin, hrin
+            variants.add(lowerQuery.replace('x', "kh"))
+            variants.add(lowerQuery.replace('x', 'h'))
+        }
         
-        // Комбінація: в→w і ч→c
+        // в → v (стандарт) ↔ w (популярно)
+        if (translit.contains('v')) {
+            // viktor → wiktor
+            variants.add(translit.replace('v', 'w'))
+        }
+        if (lowerQuery.contains('w') && !lowerQuery.any { it in 'а'..'я' }) {
+            // wiktor → viktor
+            variants.add(lowerQuery.replace('w', 'v'))
+        }
+        
+        // ч → ch (стандарт) ↔ c (популярно)
+        if (translit.contains("ch")) {
+            // ivanchenko → iwancenko
+            variants.add(translit.replace("ch", "c"))
+        }
+        if (lowerQuery.contains('c') && !lowerQuery.contains("ch") && !lowerQuery.any { it in 'а'..'я' }) {
+            // cernenko → chernenko
+            val withCh = lowerQuery.replace("c", "ch")
+            if (withCh != lowerQuery) {
+                variants.add(withCh)
+            }
+        }
+        
+        // с → s (стандарт) ↔ c (іноді)
+        if (translit.contains('s') && !translit.contains("sh") && !translit.contains("ts")) {
+            // sergiy → cergiy
+            variants.add(translit.replace('s', 'c'))
+        }
+        
+        // є → ye (стандарт) ↔ e (популярно)
+        if (translit.contains("ye")) {
+            // yevhen → evhen
+            variants.add(translit.replace("ye", "e"))
+        }
+        
+        // ю → yu (стандарт) ↔ u (іноді)
+        if (translit.contains("yu")) {
+            // yuriy → uriy
+            variants.add(translit.replace("yu", "u"))
+        }
+        
+        // ї → yi (стандарт) ↔ i (популярно)
+        if (translit.contains("yi")) {
+            // yizhak → izhak
+            variants.add(translit.replace("yi", "i"))
+        }
+        
+        // щ → shch (стандарт) ↔ sch (популярно) ↔ sh (іноді)
+        if (translit.contains("shch")) {
+            // shcherbak → scherbak, sherbak
+            variants.add(translit.replace("shch", "sch"))
+            variants.add(translit.replace("shch", "sh"))
+        }
+        if (lowerQuery.contains("sch") && !lowerQuery.any { it in 'а'..'я' }) {
+            // scherbak → shcherbak
+            variants.add(lowerQuery.replace("sch", "shch"))
+        }
+        
+        // ц → ts (стандарт) ↔ c (іноді)
+        if (translit.contains("ts")) {
+            // tsymbaly → cymbaly
+            variants.add(translit.replace("ts", "c"))
+        }
+        
+        // Комбінації: в→w і ч→c (найпопулярніше)
         if (translit.contains('v') && translit.contains("ch")) {
+            // ivanchenko → iwancenko
             variants.add(translit.replace('v', 'w').replace("ch", "c"))
+        }
+        
+        // Комбінації: г→g і в→w
+        if (translit.contains('h') && translit.contains('v') && !translit.contains("ch") && !translit.contains("kh")) {
+            // hvyzdun → gwyzdun
+            val withG = translit.replace('h', 'g')
+            variants.add(withG.replace('v', 'w'))
+        }
+        
+        // Комбінації: х→h і в→w
+        if (translit.contains("kh") && translit.contains('v')) {
+            // mykhailo → myhailo, myxailo
+            val withH = translit.replace("kh", "h")
+            val withX = translit.replace("kh", "x")
+            variants.add(withH.replace('v', 'w'))
+            variants.add(withX.replace('v', 'w'))
         }
         
         android.util.Log.d("CallChooser", "Search variants for '$q': $variants")
