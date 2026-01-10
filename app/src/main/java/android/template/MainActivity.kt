@@ -565,38 +565,78 @@ class MainActivity : ComponentActivity() {
                     Row {
                         // Кнопка голосового пошуку
                         if (query.isEmpty()) {
-                            IconButton(
-                                onClick = { startVoiceSearch { result -> 
-                                    android.util.Log.d("CallChooser", "Voice callback: result='$result', length=${result.length}")
-                                    
-                                    if (result.isNotBlank() && result.length >= 2) {
-                                        query = result
-                                        normalized = normalizeNumber(result)
-                                        selectedContactId = null
-                                        selectedContactName = null
-                                        messengerStates = MessengerAvailability()
-                                        isListening = false
+                            // Анімація пульсуючого кола
+                            val infiniteTransition = rememberInfiniteTransition(label = "mic")
+                            val scale by infiniteTransition.animateFloat(
+                                initialValue = 1f,
+                                targetValue = 1.3f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(800, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "scale"
+                            )
+                            val alpha by infiniteTransition.animateFloat(
+                                initialValue = 0.7f,
+                                targetValue = 0.2f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(800, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "alpha"
+                            )
+                            
+                            Box(contentAlignment = Alignment.Center) {
+                                // Пульсуюче коло (тільки під час запису)
+                                if (isListening) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .graphicsLayer {
+                                                scaleX = scale
+                                                scaleY = scale
+                                            }
+                                            .background(
+                                                Color.Red.copy(alpha = alpha),
+                                                shape = androidx.compose.foundation.shape.CircleShape
+                                            )
+                                    )
+                                }
+                                
+                                // Іконка мікрофона
+                                IconButton(
+                                    onClick = { startVoiceSearch { result -> 
+                                        android.util.Log.d("CallChooser", "Voice callback: result='$result', length=${result.length}")
                                         
-                                        // Прибираємо фокус з поля
-                                        focusManager.clearFocus()
-                                        
-                                        // Запускаємо пошук автоматично
-                                        android.util.Log.d("CallChooser", "Voice callback: launching search for '$result'")
-                                        scope.launch {
-                                            searchResults = searchContactsAsync(result)
-                                            android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
+                                        if (result.isNotBlank() && result.length >= 2) {
+                                            query = result
+                                            normalized = normalizeNumber(result)
+                                            selectedContactId = null
+                                            selectedContactName = null
+                                            messengerStates = MessengerAvailability()
+                                            isListening = false
+                                            
+                                            // Прибираємо фокус з поля
+                                            focusManager.clearFocus()
+                                            
+                                            // Запускаємо пошук автоматично
+                                            android.util.Log.d("CallChooser", "Voice callback: launching search for '$result'")
+                                            scope.launch {
+                                                searchResults = searchContactsAsync(result)
+                                                android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
+                                            }
+                                        } else {
+                                            android.util.Log.d("CallChooser", "Voice callback: query too short or blank, result='$result'")
+                                            isListening = false
                                         }
-                                    } else {
-                                        android.util.Log.d("CallChooser", "Voice callback: query too short or blank, result='$result'")
-                                        isListening = false
-                                    }
-                                }}
-                            ) {
-                                Text(
-                                    text = "🎤",
-                                    fontSize = 20.sp,
-                                    color = if (isListening) Color.Red else Color.White.copy(alpha = 0.7f)
-                                )
+                                    }}
+                                ) {
+                                    Text(
+                                        text = "🎤",
+                                        fontSize = 20.sp,
+                                        color = if (isListening) Color.Red else theme.textPrimary.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         }
                         
