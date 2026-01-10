@@ -1344,7 +1344,7 @@ class MainActivity : ComponentActivity() {
 
                 cursor?.use {
                     android.util.Log.d("CallChooser", "Cursor count: ${it.count}")
-                    while (it.moveToNext() && list.size < 10) {
+                    while (it.moveToNext()) {
                         val number = it.getString(0) ?: continue
                         
                         // Пропускаємо приховані номери
