@@ -607,31 +607,34 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     // Мікрофон показуємо тільки коли НЕ слухає
                                     IconButton(
-                                        onClick = { startVoiceSearch { result -> 
-                                            android.util.Log.d("CallChooser", "Voice callback: result='$result', length=${result.length}")
-                                            
-                                            if (result.isNotBlank() && result.length >= 2) {
-                                                query = result
-                                                normalized = normalizeNumber(result)
-                                                selectedContactId = null
-                                                selectedContactName = null
-                                                messengerStates = MessengerAvailability()
-                                                isListening = false
+                                        onClick = { 
+                                            isListening = true  // ✅ Встановлюємо перед викликом
+                                            startVoiceSearch { result -> 
+                                                android.util.Log.d("CallChooser", "Voice callback: result='$result', length=${result.length}")
                                                 
-                                                // Прибираємо фокус з поля
-                                                focusManager.clearFocus()
-                                                
-                                                // Запускаємо пошук автоматично
-                                                android.util.Log.d("CallChooser", "Voice callback: launching search for '$result'")
-                                                scope.launch {
-                                                    searchResults = searchContactsAsync(result)
-                                                    android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
+                                                if (result.isNotBlank() && result.length >= 2) {
+                                                    query = result
+                                                    normalized = normalizeNumber(result)
+                                                    selectedContactId = null
+                                                    selectedContactName = null
+                                                    messengerStates = MessengerAvailability()
+                                                    isListening = false
+                                                    
+                                                    // Прибираємо фокус з поля
+                                                    focusManager.clearFocus()
+                                                    
+                                                    // Запускаємо пошук автоматично
+                                                    android.util.Log.d("CallChooser", "Voice callback: launching search for '$result'")
+                                                    scope.launch {
+                                                        searchResults = searchContactsAsync(result)
+                                                        android.util.Log.d("CallChooser", "Voice callback: search completed, found ${searchResults.size}")
+                                                    }
+                                                } else {
+                                                    android.util.Log.d("CallChooser", "Voice callback: query too short or blank, result='$result'")
+                                                    isListening = false
                                                 }
-                                            } else {
-                                                android.util.Log.d("CallChooser", "Voice callback: query too short or blank, result='$result'")
-                                                isListening = false
                                             }
-                                        }}
+                                        }
                                     ) {
                                         Text(
                                             text = "🎤",
