@@ -46,16 +46,16 @@ android {
 
     // ⬇️ ДОДАНО: signingConfig ТІЛЬКИ для release (публікація)
     signingConfigs {
-        create("release") {
-            val keystorePath = System.getenv("KEYSTORE_FILE")
-            if (keystorePath != null) {
-                storeFile = file(keystorePath)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
-            }
+    create("release") {
+        val keystorePath = System.getenv("KEYSTORE_FILE")
+        if (keystorePath != null) {
+            storeFile = rootProject.file(keystorePath)
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
         }
     }
+}
 
     buildTypes {
         getByName("release") {
