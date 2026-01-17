@@ -113,8 +113,10 @@ class MainActivity : ComponentActivity() {
     private fun isMessengerInstalled(packageName: String): Boolean {
         return try {
             packageManager.getPackageInfo(packageName, 0)
+            android.util.Log.d("CallChooser", "Package $packageName: INSTALLED")
             true
         } catch (e: PackageManager.NameNotFoundException) {
+            android.util.Log.d("CallChooser", "Package $packageName: NOT FOUND")
             false
         }
     }
@@ -1270,18 +1272,6 @@ class MainActivity : ComponentActivity() {
             canOpen
         } catch (e: Exception) {
             android.util.Log.e("CallChooser", "Error checking intent for $messengerPackage", e)
-            false
-        }
-    }
-
-    // Перевірка чи встановлений месенджер (PackageManager)
-    private fun isMessengerInstalled(packageName: String): Boolean {
-        return try {
-            packageManager.getPackageInfo(packageName, 0)
-            android.util.Log.d("CallChooser", "Package $packageName: INSTALLED")
-            true
-        } catch (e: PackageManager.NameNotFoundException) {
-            android.util.Log.d("CallChooser", "Package $packageName: NOT FOUND")
             false
         }
     }
