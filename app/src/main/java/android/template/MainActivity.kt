@@ -107,6 +107,17 @@ class MainActivity : ComponentActivity() {
         const val APP_VERSION = "1.0"
         const val RELEASE_DATE = "08.01.2026"
     }
+    
+    // ================= MESSENGER INSTALLATION CHECK =================
+    
+    private fun isMessengerInstalled(packageName: String): Boolean {
+        return try {
+            packageManager.getPackageInfo(packageName, 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
 
     // ================= LOCALIZATION =================
     
@@ -130,6 +141,7 @@ class MainActivity : ComponentActivity() {
         val voiceRecognitionError: String,
         val voiceRecognitionUnavailable: String,
         val messengerUnavailable: String,
+        val messengerNotInstalled: String,
         val numberCopied: String,
         // Version dialog
         val aboutApp: String,
@@ -155,6 +167,7 @@ class MainActivity : ComponentActivity() {
                 voiceRecognitionError = "Мовлення не розпізнано",
                 voiceRecognitionUnavailable = "Голосовий пошук недоступний на цьому пристрої",
                 messengerUnavailable = "Месенджер недоступний, відкриваю GSM",
+                messengerNotInstalled = "не встановлено, відкриваю GSM",
                 numberCopied = "Номер скопійовано",
                 aboutApp = "Про програму",
                 version = "Версія",
@@ -176,6 +189,7 @@ class MainActivity : ComponentActivity() {
                 voiceRecognitionError = "Speech not recognized",
                 voiceRecognitionUnavailable = "Voice search unavailable on this device",
                 messengerUnavailable = "Messenger unavailable, opening GSM",
+                messengerNotInstalled = "not installed, opening GSM",
                 numberCopied = "Number copied",
                 aboutApp = "About",
                 version = "Version",
@@ -863,9 +877,17 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF229ED9),
                             isAvailable = messengerStates.telegram,
                             hasNumber = normalized.isNotEmpty(),
+                            isInstalled = messengerStates.telegramInstalled,
                             strings = strings,
                             theme = theme,
-                            onClick = { openTelegram(normalized) }
+                            onClick = { 
+                                if (!messengerStates.telegramInstalled) {
+                                    Toast.makeText(this@MainActivity, "Telegram ${strings.messengerNotInstalled}", Toast.LENGTH_SHORT).show()
+                                    openGsm(normalized)
+                                } else {
+                                    openTelegram(normalized)
+                                }
+                            }
                         )
                     }
                 }
@@ -880,9 +902,17 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF25D366),
                             isAvailable = messengerStates.whatsApp,
                             hasNumber = normalized.isNotEmpty(),
+                            isInstalled = messengerStates.whatsAppInstalled,
                             strings = strings,
                             theme = theme,
-                            onClick = { openWhatsApp(normalized) }
+                            onClick = { 
+                                if (!messengerStates.whatsAppInstalled) {
+                                    Toast.makeText(this@MainActivity, "WhatsApp ${strings.messengerNotInstalled}", Toast.LENGTH_SHORT).show()
+                                    openGsm(normalized)
+                                } else {
+                                    openWhatsApp(normalized)
+                                }
+                            }
                         )
                     }
                     Box(Modifier.weight(1f).padding(start = 6.dp)) {
@@ -892,9 +922,17 @@ class MainActivity : ComponentActivity() {
                             fg = Color(0xFF7360F2),
                             isAvailable = messengerStates.viber,
                             hasNumber = normalized.isNotEmpty(),
+                            isInstalled = messengerStates.viberInstalled,
                             strings = strings,
                             theme = theme,
-                            onClick = { openViber(normalized) }
+                            onClick = { 
+                                if (!messengerStates.viberInstalled) {
+                                    Toast.makeText(this@MainActivity, "Viber ${strings.messengerNotInstalled}", Toast.LENGTH_SHORT).show()
+                                    openGsm(normalized)
+                                } else {
+                                    openViber(normalized)
+                                }
+                            }
                         )
                     }
                 }
@@ -1098,6 +1136,7 @@ class MainActivity : ComponentActivity() {
         fg: Color,
         isAvailable: Boolean,
         hasNumber: Boolean,
+        isInstalled: Boolean,  // ✅ Новий параметр
         strings: Strings,
         theme: ThemeColors,
         onClick: () -> Unit
@@ -1109,9 +1148,9 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .height(60.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = bg,
-                contentColor = fg,
-                disabledContainerColor = theme.surface,  // Використовуємо theme.surface (#FFF5EE для світлої)
+                containerColor = bg.copy(alpha = if (isInstalled) 1f else 0.4f),  // ✅ Димна якщо не встановлено
+                contentColor = fg.copy(alpha = if (isInstalled) 1f else 0.5f),     // ✅ Димний текст
+                disabledContainerColor = theme.surface,
                 disabledContentColor = fg.copy(alpha = 0.4f)
             ),
             shape = RoundedCornerShape(12.dp)
@@ -1209,7 +1248,10 @@ class MainActivity : ComponentActivity() {
     data class MessengerAvailability(
         val whatsApp: Boolean = false,
         val telegram: Boolean = false,
-        val viber: Boolean = false
+        val viber: Boolean = false,
+        val whatsAppInstalled: Boolean = false,
+        val telegramInstalled: Boolean = false,
+        val viberInstalled: Boolean = false
     )
 
     // ================= MESSENGER CHECK =================
@@ -1250,6 +1292,13 @@ class MainActivity : ComponentActivity() {
             var whatsApp = false
             var telegram = false
             var viber = false
+            
+            // Перевіряємо чи встановлені месенджери
+            val whatsAppInstalled = isMessengerInstalled(WHATSAPP_PACKAGE)
+            val telegramInstalled = isMessengerInstalled(TELEGRAM_PACKAGE)
+            val viberInstalled = isMessengerInstalled(VIBER_PACKAGE)
+            
+            android.util.Log.d("CallChooser", "Installed - WA:$whatsAppInstalled TG:$telegramInstalled VB:$viberInstalled")
 
             // Крок 1: Спробувати знайти в ContactsContract (100% точність)
             try {
@@ -1283,21 +1332,21 @@ class MainActivity : ComponentActivity() {
 
             // Крок 2: Intent Resolver для тих що не знайшлись (точніше ніж PackageManager)
             // Перевіряємо чи можна відкрити месенджер з цим номером
-            if (!whatsApp && phoneNumber.isNotEmpty()) {
+            if (!whatsApp && phoneNumber.isNotEmpty() && whatsAppInstalled) {
                 whatsApp = canOpenInMessenger(phoneNumber, WHATSAPP_PACKAGE)
                 if (whatsApp) {
                     android.util.Log.d("CallChooser", "WhatsApp available via Intent Resolver")
                 }
             }
             
-            if (!telegram && phoneNumber.isNotEmpty()) {
+            if (!telegram && phoneNumber.isNotEmpty() && telegramInstalled) {
                 telegram = canOpenInMessenger(phoneNumber, TELEGRAM_PACKAGE)
                 if (telegram) {
                     android.util.Log.d("CallChooser", "Telegram available via Intent Resolver")
                 }
             }
             
-            if (!viber && phoneNumber.isNotEmpty()) {
+            if (!viber && phoneNumber.isNotEmpty() && viberInstalled) {
                 viber = canOpenInMessenger(phoneNumber, VIBER_PACKAGE)
                 if (viber) {
                     android.util.Log.d("CallChooser", "Viber available via Intent Resolver")
@@ -1306,7 +1355,14 @@ class MainActivity : ComponentActivity() {
             
             android.util.Log.d("CallChooser", "Final result - WA:$whatsApp TG:$telegram VB:$viber")
 
-            MessengerAvailability(whatsApp, telegram, viber)
+            MessengerAvailability(
+                whatsApp = whatsApp,
+                telegram = telegram,
+                viber = viber,
+                whatsAppInstalled = whatsAppInstalled,
+                telegramInstalled = telegramInstalled,
+                viberInstalled = viberInstalled
+            )
         }
     }
 
