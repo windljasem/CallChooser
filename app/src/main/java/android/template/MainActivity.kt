@@ -108,6 +108,54 @@ class MainActivity : ComponentActivity() {
         const val RELEASE_DATE = "08.01.2026"
     }
     
+    // ================= DEVICE TYPE DETECTION =================
+    
+    private fun Context.isTablet(): Boolean {
+        return resources.configuration.smallestScreenWidthDp >= 600
+    }
+    
+    // Адаптивні параметри UI
+    data class AdaptiveParams(
+        val contentMaxWidth: Dp,
+        val horizontalPadding: Dp,
+        val searchFieldHeight: Dp,
+        val buttonHeight: Dp,
+        val messengerButtonHeight: Dp,
+        val titleFontSize: TextUnit,
+        val bodyFontSize: TextUnit,
+        val smallFontSize: TextUnit
+    )
+    
+    @Composable
+    private fun getAdaptiveParams(): AdaptiveParams {
+        val context = LocalContext.current
+        val isTablet = remember { context.isTablet() }
+        
+        return if (isTablet) {
+            AdaptiveParams(
+                contentMaxWidth = 600.dp,
+                horizontalPadding = 32.dp,
+                searchFieldHeight = 64.dp,
+                buttonHeight = 72.dp,
+                messengerButtonHeight = 72.dp,
+                titleFontSize = 24.sp,
+                bodyFontSize = 18.sp,
+                smallFontSize = 14.sp
+            )
+        } else {
+            AdaptiveParams(
+                contentMaxWidth = Dp.Infinity,
+                horizontalPadding = 16.dp,
+                searchFieldHeight = 56.dp,
+                buttonHeight = 56.dp,
+                messengerButtonHeight = 60.dp,
+                titleFontSize = 20.sp,
+                bodyFontSize = 16.sp,
+                smallFontSize = 12.sp
+            )
+        }
+    }
+    
     // ================= MESSENGER INSTALLATION CHECK =================
     
     private fun isMessengerInstalled(packageName: String): Boolean {
@@ -352,6 +400,9 @@ class MainActivity : ComponentActivity() {
     // ================= RECENT CALLS =================
     @Composable
     fun CallChooserUI() {
+        // Адаптивні параметри для телефон/планшет
+        val adaptiveParams = getAdaptiveParams()
+        
         var query by remember { mutableStateOf("") }
         var normalized by remember { mutableStateOf("") }
         var searchResults by remember { mutableStateOf(listOf<ContactItem>()) }
@@ -433,7 +484,8 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(theme.background)
-                .padding(16.dp)
+                .widthIn(max = adaptiveParams.contentMaxWidth)  // ✅ Обмеження на планшеті
+                .padding(horizontal = adaptiveParams.horizontalPadding)  // ✅ Адаптивний padding
                 .statusBarsPadding()
         ) {
 
@@ -448,7 +500,7 @@ class MainActivity : ComponentActivity() {
                 // Динамічний заголовок: ім'я контакта або назва програми
                 Text(
                     text = selectedContactName ?: strings.appName,
-                    style = MaterialTheme.typography.headlineMedium,
+                    fontSize = adaptiveParams.titleFontSize,  // ✅ Адаптивний розмір
                     fontWeight = FontWeight.Bold,
                     color = theme.textPrimary,
                     letterSpacing = 1.sp,
@@ -677,7 +729,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(adaptiveParams.searchFieldHeight)  // ✅ Адаптивна висота
             )
 
             // Пульсуючий індикатор під час голосового запису
@@ -867,6 +921,7 @@ class MainActivity : ComponentActivity() {
                             text = "GSM",
                             bg = Color(0xFFF0F0F0),
                             fg = Color.Black,
+                            buttonHeight = adaptiveParams.buttonHeight,  // ✅ Адаптивна висота
                             enabled = normalized.isNotEmpty(),
                             onClick = { openGsm(normalized) },
                             onLongPress = { copyNumber(normalized) }
@@ -880,6 +935,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.telegram,
                             hasNumber = normalized.isNotEmpty(),
                             isInstalled = messengerStates.telegramInstalled,
+                            buttonHeight = adaptiveParams.messengerButtonHeight,  // ✅ Адаптивна висота
                             strings = strings,
                             theme = theme,
                             onClick = { 
@@ -905,6 +961,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.whatsApp,
                             hasNumber = normalized.isNotEmpty(),
                             isInstalled = messengerStates.whatsAppInstalled,
+                            buttonHeight = adaptiveParams.messengerButtonHeight,  // ✅ Адаптивна висота
                             strings = strings,
                             theme = theme,
                             onClick = { 
@@ -925,6 +982,7 @@ class MainActivity : ComponentActivity() {
                             isAvailable = messengerStates.viber,
                             hasNumber = normalized.isNotEmpty(),
                             isInstalled = messengerStates.viberInstalled,
+                            buttonHeight = adaptiveParams.messengerButtonHeight,  // ✅ Адаптивна висота
                             strings = strings,
                             theme = theme,
                             onClick = { 
@@ -1110,6 +1168,7 @@ class MainActivity : ComponentActivity() {
         text: String,
         bg: Color,
         fg: Color,
+        buttonHeight: Dp,  // ✅ Адаптивна висота
         enabled: Boolean = true,
         onClick: () -> Unit
     ) {
@@ -1118,7 +1177,7 @@ class MainActivity : ComponentActivity() {
             enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(buttonHeight),  // ✅ Використовуємо адаптивну висоту
             colors = ButtonDefaults.buttonColors(
                 containerColor = bg.copy(alpha = if (enabled) 1f else 0.3f),
                 contentColor = fg.copy(alpha = if (enabled) 1f else 0.4f),
@@ -1138,7 +1197,8 @@ class MainActivity : ComponentActivity() {
         fg: Color,
         isAvailable: Boolean,
         hasNumber: Boolean,
-        isInstalled: Boolean,  // ✅ Новий параметр
+        isInstalled: Boolean,
+        buttonHeight: Dp,  // ✅ Адаптивна висота
         strings: Strings,
         theme: ThemeColors,
         onClick: () -> Unit
@@ -1148,7 +1208,7 @@ class MainActivity : ComponentActivity() {
             enabled = hasNumber,  // Кнопка активна якщо є номер
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(buttonHeight),  // ✅ Використовуємо адаптивну висоту
             colors = ButtonDefaults.buttonColors(
                 containerColor = bg.copy(alpha = if (isInstalled) 1f else 0.4f),  // ✅ Димна якщо не встановлено
                 contentColor = fg.copy(alpha = if (isInstalled) 1f else 0.5f),     // ✅ Димний текст
@@ -1204,6 +1264,7 @@ class MainActivity : ComponentActivity() {
         text: String,
         bg: Color,
         fg: Color,
+        buttonHeight: Dp,  // ✅ Адаптивна висота
         enabled: Boolean = true,
         onClick: () -> Unit,
         onLongPress: () -> Unit
@@ -1211,7 +1272,7 @@ class MainActivity : ComponentActivity() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(buttonHeight)  // ✅ Використовуємо адаптивну висоту
                 .clip(RoundedCornerShape(12.dp))
                 .background(bg.copy(alpha = if (enabled) 1f else 0.3f))
                 .combinedClickable(
