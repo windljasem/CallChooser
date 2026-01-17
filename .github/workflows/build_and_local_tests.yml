@@ -22,6 +22,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # ⬇️ ВАЖЛИВЕ: відновлення keystore
+      - name: Decode release keystore
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > callchooser-release.jks
+
       - name: Fix Gradle Wrapper for F-Droid
         run: |
           ./gradlew wrapper \
@@ -31,8 +35,14 @@ jobs:
       - name: Build APK (debug)
         run: ./gradlew assembleDebug --stacktrace
 
+      # ⬇️ ВАЖЛИВЕ: release з env
       - name: Build AAB (release)
         run: ./gradlew bundleRelease --stacktrace
+        env:
+          KEYSTORE_FILE: callchooser-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v5
