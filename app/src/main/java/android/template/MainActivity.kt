@@ -35,10 +35,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.LocalTextStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.ActivityCompat
@@ -144,7 +150,7 @@ class MainActivity : ComponentActivity() {
             )
         } else {
             AdaptiveParams(
-                contentMaxWidth = Dp.Infinity,
+                contentMaxWidth = Dp.Unspecified,  // ✅ Без обмеження для телефонів
                 horizontalPadding = 16.dp,
                 searchFieldHeight = 56.dp,
                 buttonHeight = 56.dp,
