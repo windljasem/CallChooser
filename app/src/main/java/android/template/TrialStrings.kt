@@ -128,10 +128,12 @@ fun getTrialStringsEN(): TrialStrings = TrialStrings(
 
 /**
  * Отримати strings по мові
+ * @param language "UK" або "EN"
  */
-fun getTrialStrings(language: Language): TrialStrings {
-    return when (language) {
-        Language.UK -> getTrialStringsUK()
-        Language.EN -> getTrialStringsEN()
+fun getTrialStrings(language: String): TrialStrings {
+    return when (language.uppercase()) {
+        "UK" -> getTrialStringsUK()
+        "EN" -> getTrialStringsEN()
+        else -> getTrialStringsEN() // Default EN
     }
 }
