@@ -2209,7 +2209,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // Cleanup speech recognizer
         speechRecognizer?.destroy()
+        
+        // Cleanup billing
+        if (::billingManager.isInitialized) {
+            billingManager.disconnect()
+        }
+        
+        // Cleanup coroutine scope
+        mainScope.cancel()
     }
 
     // ================= TRANSLITERATION =================
@@ -2477,15 +2487,5 @@ class MainActivity : ComponentActivity() {
 
             list
         }
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        
-        if (::billingManager.isInitialized) {
-            billingManager.disconnect()
-        }
-        
-        mainScope.cancel()
     }
 }
