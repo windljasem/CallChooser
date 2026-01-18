@@ -622,6 +622,7 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 label = { Text(strings.searchHint) },
+                singleLine = true,  // ✅ Один рядок (не обрізає текст)
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = theme.textPrimary,
                     unfocusedTextColor = theme.textPrimary,
@@ -633,7 +634,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 textStyle = LocalTextStyle.current.copy(
                     color = theme.textPrimary,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,  // ✅ Зменшено з 17sp для кращого фіту
                     fontWeight = FontWeight.Normal
                 ),
                 trailingIcon = {
@@ -919,10 +920,11 @@ class MainActivity : ComponentActivity() {
                     .fillMaxWidth()
                     .imePadding()
                     .navigationBarsPadding()
+                    .padding(bottom = 16.dp)  // ✅ Додатковий відступ від навігації Android
             ) {
 
                 Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
+                    Box(Modifier.weight(1f).padding(end = 4.dp)) {  // ✅ Зменшено з 6dp
                         StyledButtonWithLongPress(
                             text = "GSM",
                             bg = Color(0xFFF0F0F0),
@@ -933,7 +935,7 @@ class MainActivity : ComponentActivity() {
                             onLongPress = { copyNumber(normalized) }
                         )
                     }
-                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                    Box(Modifier.weight(1f).padding(start = 4.dp)) {  // ✅ Зменшено з 6dp
                         MessengerButton(
                             name = "Telegram",
                             bg = Color(0xFFEAF6FD),
@@ -956,10 +958,10 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))  // ✅ Зменшено з 12dp
 
                 Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f).padding(end = 6.dp)) {
+                    Box(Modifier.weight(1f).padding(end = 4.dp)) {  // ✅ Зменшено з 6dp
                         MessengerButton(
                             name = "WhatsApp",
                             bg = Color(0xFFE9F9EF),
@@ -980,7 +982,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                    Box(Modifier.weight(1f).padding(start = 4.dp)) {  // ✅ Зменшено з 6dp
                         MessengerButton(
                             name = "Viber",
                             bg = Color(0xFFF0EDFF),
