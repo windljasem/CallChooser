@@ -55,6 +55,9 @@ import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -73,6 +76,11 @@ class MainActivity : ComponentActivity() {
     
     private var secretClickCount = 0
     private var secretLastClickTime = 0L
+    
+    // ================= BILLING MANAGER =================
+    
+    private lateinit var billingManager: BillingManager
+    private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     // ================= LANGUAGE PREFERENCES =================
     
@@ -258,6 +266,21 @@ class MainActivity : ComponentActivity() {
         android.util.Log.d("CallChooser", "Trial status: $daysUsed days used, $daysLeft days left, active: $isActive")
     }
     
+    // ================= BILLING INITIALIZATION =================
+    
+    private fun initializeBilling() {
+        billingManager = BillingManager(this, mainScope)
+        
+        billingManager.initialize(
+            onPremiumStatusChanged = { isPremium ->
+                android.util.Log.d("CallChooser", "Premium status changed: $isPremium")
+            },
+            onConnectionReady = {
+                android.util.Log.d("CallChooser", "Billing ready, checking purchases...")
+            }
+        )
+    }
+    
     private fun getTrialDaysUsed(): Int {
         val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
         val installDate = prefs.getLong("install_date", System.currentTimeMillis())
@@ -282,7 +305,10 @@ class MainActivity : ComponentActivity() {
         // Developer mode = завжди можна
         if (isDevModeEnabled()) return true
         
-        // Premium = завжди можна
+        // Premium через Billing = завжди можна
+        if (::billingManager.isInitialized && billingManager.isPremiumUnlocked()) return true
+        
+        // Premium локально (Developer Menu) = можна
         if (isPremiumUnlocked()) return true
         
         // Trial активний = можна
@@ -533,6 +559,9 @@ class MainActivity : ComponentActivity() {
         
         // Ініціалізація Trial (зберігаємо дату установки якщо перший запуск)
         initializeTrial()
+        
+        // Ініціалізація Billing (Google Play покупки)
+        initializeBilling()
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
@@ -616,6 +645,26 @@ class MainActivity : ComponentActivity() {
         
         val strings = getStrings(currentLanguage)
         val theme = getThemeColors(currentTheme)
+        
+        // ============ TRIAL & PREMIUM STATE ============
+        
+        // Trial strings
+        val languageString = when (currentLanguage) {
+            Language.UK -> "UK"
+            Language.EN -> "EN"
+        }
+        val trialStrings = getTrialStrings(languageString)
+        
+        // Premium dialog state
+        var showPremiumDialog by remember { mutableStateOf(false) }
+        var isProcessing by remember { mutableStateOf(false) }
+        var processingMessage by remember { mutableStateOf("") }
+        
+        // Trial status
+        val trialDaysLeft = this@MainActivity.getTrialDaysLeft()
+        val isTrialActive = this@MainActivity.isTrialActive()
+        val isPremium = this@MainActivity.canUseMessengers() && !isTrialActive
+        val isDarkTheme = currentTheme != Theme.LIGHT
         
         // Зберігаємо мову при зміні
         LaunchedEffect(currentLanguage) {
@@ -1345,6 +1394,82 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+        
+        // ============ PREMIUM DIALOG ============
+        
+        if (showPremiumDialog) {
+            PremiumDialog(
+                trialStrings = trialStrings,
+                isDarkTheme = isDarkTheme,
+                onBuyPremium = {
+                    isProcessing = true
+                    processingMessage = trialStrings.processingPurchase
+                    
+                    billingManager.launchPurchaseFlow(
+                        activity = this@MainActivity,
+                        onSuccess = {
+                            isProcessing = false
+                            showPremiumDialog = false
+                            Toast.makeText(
+                                this@MainActivity,
+                                trialStrings.purchaseSuccess,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        },
+                        onError = { error ->
+                            isProcessing = false
+                            Toast.makeText(
+                                this@MainActivity,
+                                "${trialStrings.purchaseFailed}: $error",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                },
+                onRestorePurchases = {
+                    isProcessing = true
+                    processingMessage = trialStrings.processingPurchase
+                    
+                    billingManager.restorePurchases(
+                        onSuccess = { found ->
+                            isProcessing = false
+                            if (found) {
+                                showPremiumDialog = false
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    trialStrings.restoreSuccess,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    trialStrings.restoreNotFound,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        onError = { error ->
+                            isProcessing = false
+                            Toast.makeText(
+                                this@MainActivity,
+                                "${trialStrings.restoreFailed}: $error",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                },
+                onDismiss = {
+                    showPremiumDialog = false
+                }
+            )
+        }
+        
+        if (isProcessing) {
+            ProcessingDialog(
+                message = processingMessage,
+                isDarkTheme = isDarkTheme
+            )
         }
     }
 
@@ -2352,5 +2477,15 @@ class MainActivity : ComponentActivity() {
 
             list
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        
+        if (::billingManager.isInitialized) {
+            billingManager.disconnect()
+        }
+        
+        mainScope.cancel()
     }
 }
