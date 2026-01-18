@@ -52,7 +52,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.ActivityCompat
-import com.callchooser.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,9 +112,14 @@ class MainActivity : ComponentActivity() {
     
     // ================= DEVELOPER MODE FUNCTIONS =================
     
+    private fun isDebugMode(): Boolean {
+        // Перевірка debug mode через applicationInfo
+        return (applicationInfo.flags and android.content.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }
+    
     private fun isDevModeEnabled(): Boolean {
         val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
-        return prefs.getBoolean("dev_mode_enabled", false) || BuildConfig.DEBUG
+        return prefs.getBoolean("dev_mode_enabled", false) || isDebugMode()
     }
     
     private fun showDeveloperMenu() {
