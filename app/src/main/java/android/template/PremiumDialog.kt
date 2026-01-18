@@ -20,11 +20,16 @@ import androidx.compose.ui.window.Dialog
 @Composable
 fun PremiumDialog(
     trialStrings: TrialStrings,
-    theme: ThemeColors,
+    isDarkTheme: Boolean = true,  // Замість theme передаємо isDarkTheme
     onBuyPremium: () -> Unit,
     onRestorePurchases: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Визначаємо кольори залежно від теми
+    val backgroundColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
+    val textPrimary = if (isDarkTheme) Color.White else Color.Black
+    val textSecondary = if (isDarkTheme) Color(0xFFB0B0B0) else Color(0xFF666666)
+    
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -32,7 +37,7 @@ fun PremiumDialog(
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = theme.background
+                containerColor = backgroundColor
             )
         ) {
             Column(
@@ -54,13 +59,13 @@ fun PremiumDialog(
                     text = trialStrings.premiumTitle,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = theme.textPrimary,
+                    color = textPrimary,
                     textAlign = TextAlign.Center
                 )
                 
                 // Divider
-                Divider(
-                    color = theme.textSecondary.copy(alpha = 0.3f),
+                HorizontalDivider(
+                    color = textSecondary.copy(alpha = 0.3f),
                     thickness = 1.dp
                 )
                 
@@ -78,7 +83,7 @@ fun PremiumDialog(
                             Text(
                                 text = feature,
                                 fontSize = 16.sp,
-                                color = theme.textPrimary,
+                                color = textPrimary,
                                 lineHeight = 22.sp
                             )
                         }
@@ -111,7 +116,7 @@ fun PremiumDialog(
                         Text(
                             text = trialStrings.premiumFeatures[3], // "Одноразова оплата"
                             fontSize = 14.sp,
-                            color = theme.textSecondary
+                            color = textSecondary
                         )
                     }
                 }
@@ -145,7 +150,7 @@ fun PremiumDialog(
                     Text(
                         text = trialStrings.restorePurchases,
                         fontSize = 14.sp,
-                        color = theme.textSecondary
+                        color = textSecondary
                     )
                 }
                 
@@ -157,7 +162,7 @@ fun PremiumDialog(
                     Text(
                         text = trialStrings.maybeLater,
                         fontSize = 14.sp,
-                        color = theme.textSecondary
+                        color = textSecondary
                     )
                 }
             }
@@ -171,8 +176,11 @@ fun PremiumDialog(
 @Composable
 fun ProcessingDialog(
     message: String,
-    theme: ThemeColors
+    isDarkTheme: Boolean = true
 ) {
+    val backgroundColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
+    val textPrimary = if (isDarkTheme) Color.White else Color.Black
+    
     Dialog(onDismissRequest = {}) {
         Card(
             modifier = Modifier
@@ -180,7 +188,7 @@ fun ProcessingDialog(
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = theme.background
+                containerColor = backgroundColor
             )
         ) {
             Column(
@@ -191,13 +199,13 @@ fun ProcessingDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 CircularProgressIndicator(
-                    color = theme.textPrimary
+                    color = textPrimary
                 )
                 
                 Text(
                     text = message,
                     fontSize = 16.sp,
-                    color = theme.textPrimary,
+                    color = textPrimary,
                     textAlign = TextAlign.Center
                 )
             }
