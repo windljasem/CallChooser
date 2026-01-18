@@ -928,6 +928,12 @@ class MainActivity : ComponentActivity() {
                     fontSize = 16.sp,  // ✅ Зменшено з 17sp для кращого фіту
                     fontWeight = FontWeight.Normal
                 ),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp  // ✅ Достатній padding знизу щоб текст не обрізався
+                ),
                 trailingIcon = {
                     Row {
                         // Кнопка голосового пошуку
