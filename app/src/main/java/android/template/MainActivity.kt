@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ApplicationInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -113,14 +112,10 @@ class MainActivity : ComponentActivity() {
     
     // ================= DEVELOPER MODE FUNCTIONS =================
     
-    private fun isDebugMode(): Boolean {
-        // Перевірка debug mode через applicationInfo
-        return (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-    }
-    
     private fun isDevModeEnabled(): Boolean {
         val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
-        return prefs.getBoolean("dev_mode_enabled", false) || isDebugMode()
+        return prefs.getBoolean("dev_mode_enabled", false)
+        // Прибрано isDebugMode() - trial працює для ВСІХ builds
     }
     
     private fun showDeveloperMenu() {
@@ -754,21 +749,31 @@ class MainActivity : ComponentActivity() {
                                         // Логування (тільки в debug)
                                         android.util.Log.d("CallChooser", "🤫 Secret: ${this@MainActivity.secretClickCount}/30")
                                         
-                                        // ТІЛЬКИ на 30-му кліку щось відбувається!
+                                        // ТІЛЬКИ на 30-му кліку + UK + Light theme!
                                         if (this@MainActivity.secretClickCount >= 30) {
-                                            // Активуємо Developer Mode
-                                            this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
-                                                .edit()
-                                                .putBoolean("dev_mode_enabled", true)
-                                                .apply()
-                                            
-                                            this@MainActivity.secretClickCount = 0
-                                            
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "🔧 Developer Mode Activated",
-                                                Toast.LENGTH_LONG
-                                            ).show()
+                                            // Перевіряємо умови активації:
+                                            // 1. Локалізація = UK
+                                            // 2. Тема = Light
+                                            if (currentLanguage == Language.UK && currentTheme == Theme.LIGHT) {
+                                                // ✅ Всі умови виконано - активуємо Developer Mode
+                                                this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
+                                                    .edit()
+                                                    .putBoolean("dev_mode_enabled", true)
+                                                    .apply()
+                                                
+                                                this@MainActivity.secretClickCount = 0
+                                                
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    "🔧 Developer Mode Activated",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            } else {
+                                                // ❌ Неправильні налаштування - нічого не відбувається
+                                                this@MainActivity.secretClickCount = 0
+                                                android.util.Log.d("CallChooser", "❌ Secret: Wrong settings (need UK + Light)")
+                                                // НЕ показуємо Toast - користувач не має знати що щось не так
+                                            }
                                         }
                                     }
                             )
