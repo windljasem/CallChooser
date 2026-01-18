@@ -937,12 +937,6 @@ class MainActivity : ComponentActivity() {
                     fontSize = 16.sp,  // ✅ Зменшено з 17sp для кращого фіту
                     fontWeight = FontWeight.Normal
                 ),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp  // ✅ Достатній padding знизу щоб текст не обрізався
-                ),
                 trailingIcon = {
                     Row {
                         // Кнопка голосового пошуку
@@ -1044,7 +1038,7 @@ class MainActivity : ComponentActivity() {
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(adaptiveParams.searchFieldHeight)  // ✅ Адаптивна висота
+                    .heightIn(min = adaptiveParams.searchFieldHeight)  // ✅ Мінімальна висота, може бути більше
             )
 
             // Пульсуючий індикатор під час голосового запису
