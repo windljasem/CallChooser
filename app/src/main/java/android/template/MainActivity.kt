@@ -726,6 +726,10 @@ class MainActivity : ComponentActivity() {
                                 letterSpacing = 1.sp
                             )
                             
+                            // Захоплюємо поточні значення для використання в onClick
+                            val capturedLanguage = currentLanguage
+                            val capturedTheme = currentTheme
+                            
                             // 🤫 ПРИХОВАНА ЗОНА (30 кліків для Developer Mode)
                             Box(
                                 modifier = Modifier
@@ -754,7 +758,7 @@ class MainActivity : ComponentActivity() {
                                             // Перевіряємо умови активації:
                                             // 1. Локалізація = UK
                                             // 2. Тема = Light
-                                            if (currentLanguage == Language.UK && currentTheme == Theme.LIGHT) {
+                                            if (capturedLanguage == Language.UK && capturedTheme == Theme.LIGHT) {
                                                 // ✅ Всі умови виконано - активуємо Developer Mode
                                                 this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
                                                     .edit()
