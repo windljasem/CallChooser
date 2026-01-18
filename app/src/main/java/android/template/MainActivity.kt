@@ -1,6 +1,9 @@
 package com.callchooser.app
 
 import android.Manifest
+import android.app.AlertDialog
+import android.os.Build
+import android.widget.EditText
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import android.content.ClipData
@@ -64,6 +67,12 @@ class MainActivity : ComponentActivity() {
     private var currentTheme: Theme = Theme.DEFAULT  // Default = DEFAULT (синя)
     private var currentThemeColors: ThemeColors = getThemeColors(Theme.DEFAULT)
     
+    // ================= SECRET DEVELOPER MODE =================
+    // 30 кліків в пробіл між "Call" і "Chooser" для активації
+    
+    private var secretClickCount = 0
+    private var secretLastClickTime = 0L
+    
     // ================= LANGUAGE PREFERENCES =================
     
     private fun saveLanguage(language: Language) {
@@ -98,6 +107,184 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Theme.DEFAULT
         }
+    }
+    
+    // ================= DEVELOPER MODE FUNCTIONS =================
+    
+    private fun isDevModeEnabled(): Boolean {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        return prefs.getBoolean("dev_mode_enabled", false) || BuildConfig.DEBUG
+    }
+    
+    private fun showDeveloperMenu() {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        val installDate = prefs.getLong("install_date", System.currentTimeMillis())
+        val premiumUnlocked = prefs.getBoolean("premium_unlocked", false)
+        
+        val daysUsed = ((System.currentTimeMillis() - installDate) / (24 * 60 * 60 * 1000)).toInt()
+        val daysLeft = maxOf(0, 30 - daysUsed)
+        
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        val installDateStr = dateFormat.format(Date(installDate))
+        
+        AlertDialog.Builder(this)
+            .setTitle("🔧 Developer Tools")
+            .setMessage("""
+                Trial Days: $daysUsed / 30 (left: $daysLeft)
+                Premium: ${if (premiumUnlocked) "✅ Unlocked" else "🔒 Locked"}
+                Install Date: $installDateStr
+                
+                Device: ${Build.MODEL}
+                Android: ${Build.VERSION.SDK_INT}
+            """.trimIndent())
+            .setItems(arrayOf(
+                "🔄 Reset Trial → 30 days",
+                "⭐ Force Unlock Premium",
+                "🔒 Force Lock Premium",
+                "⏰ Set Trial Days...",
+                "🗑️ Clear All Data",
+                "❌ Disable Dev Mode"
+            )) { _, which ->
+                when(which) {
+                    0 -> resetTrial()
+                    1 -> forceUnlockPremium()
+                    2 -> forceLockPremium()
+                    3 -> showSetDaysDialog()
+                    4 -> clearAllData()
+                    5 -> disableDevMode()
+                }
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+    
+    private fun resetTrial() {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        prefs.edit()
+            .putLong("install_date", System.currentTimeMillis())
+            .apply()
+        Toast.makeText(this, "✅ Trial reset to 30 days", Toast.LENGTH_SHORT).show()
+        recreate()
+    }
+    
+    private fun forceUnlockPremium() {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("premium_unlocked", true)
+            .apply()
+        Toast.makeText(this, "⭐ Premium unlocked", Toast.LENGTH_SHORT).show()
+        recreate()
+    }
+    
+    private fun forceLockPremium() {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("premium_unlocked", false)
+            .apply()
+        Toast.makeText(this, "🔒 Premium locked", Toast.LENGTH_SHORT).show()
+        recreate()
+    }
+    
+    private fun showSetDaysDialog() {
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "Days used (0-999)"
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("Set Trial Days Used")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val days = input.text.toString().toIntOrNull() ?: 0
+                val installDate = System.currentTimeMillis() - (days * 24L * 60 * 60 * 1000)
+                
+                getSharedPreferences("callchooser", MODE_PRIVATE)
+                    .edit()
+                    .putLong("install_date", installDate)
+                    .apply()
+                    
+                Toast.makeText(this, "✅ Set to $days days used", Toast.LENGTH_SHORT).show()
+                recreate()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun clearAllData() {
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ Clear All Data?")
+            .setMessage("This will reset trial, premium, and all settings.")
+            .setPositiveButton("Clear") { _, _ ->
+                getSharedPreferences("callchooser", MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+                Toast.makeText(this, "🗑️ All data cleared", Toast.LENGTH_SHORT).show()
+                recreate()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun disableDevMode() {
+        getSharedPreferences("callchooser", MODE_PRIVATE)
+            .edit()
+            .putBoolean("dev_mode_enabled", false)
+            .apply()
+        secretClickCount = 0
+        Toast.makeText(this, "❌ Developer Mode disabled", Toast.LENGTH_SHORT).show()
+        recreate()
+    }
+    
+    // ================= TRIAL MANAGEMENT =================
+    
+    private fun initializeTrial() {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        
+        // Якщо це перший запуск - зберігаємо дату установки
+        if (!prefs.contains("install_date")) {
+            prefs.edit()
+                .putLong("install_date", System.currentTimeMillis())
+                .apply()
+            android.util.Log.d("CallChooser", "Trial started: ${Date()}")
+        }
+        
+        // Логуємо статус trial
+        val daysUsed = getTrialDaysUsed()
+        val daysLeft = getTrialDaysLeft()
+        val isActive = isTrialActive()
+        android.util.Log.d("CallChooser", "Trial status: $daysUsed days used, $daysLeft days left, active: $isActive")
+    }
+    
+    private fun getTrialDaysUsed(): Int {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        val installDate = prefs.getLong("install_date", System.currentTimeMillis())
+        val daysUsed = ((System.currentTimeMillis() - installDate) / (24 * 60 * 60 * 1000)).toInt()
+        return daysUsed
+    }
+    
+    private fun getTrialDaysLeft(): Int {
+        return maxOf(0, 30 - getTrialDaysUsed())
+    }
+    
+    private fun isTrialActive(): Boolean {
+        return getTrialDaysLeft() > 0
+    }
+    
+    private fun isPremiumUnlocked(): Boolean {
+        val prefs = getSharedPreferences("callchooser", MODE_PRIVATE)
+        return prefs.getBoolean("premium_unlocked", false)
+    }
+    
+    private fun canUseMessengers(): Boolean {
+        // Developer mode = завжди можна
+        if (isDevModeEnabled()) return true
+        
+        // Premium = завжди можна
+        if (isPremiumUnlocked()) return true
+        
+        // Trial активний = можна
+        return isTrialActive()
     }
 
     companion object {
@@ -341,6 +528,9 @@ class MainActivity : ComponentActivity() {
         currentTheme = loadTheme()
         currentThemeColors = getThemeColors(currentTheme)
         android.util.Log.d("CallChooser", "Loaded theme: $currentTheme")
+        
+        // Ініціалізація Trial (зберігаємо дату установки якщо перший запуск)
+        initializeTrial()
 
         // Запит обох дозволів
         requestPermissionsIfNeeded()
@@ -503,29 +693,123 @@ class MainActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Динамічний заголовок: ім'я контакта або назва програми
-                Text(
-                    text = selectedContactName ?: strings.appName,
-                    fontSize = adaptiveParams.titleFontSize,  // ✅ Адаптивний розмір
-                    fontWeight = FontWeight.Bold,
-                    color = theme.textPrimary,
-                    letterSpacing = 1.sp,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { 
-                            // Показуємо діалог тільки якщо це назва програми, не ім'я контакта
-                            if (selectedContactName == null) {
-                                showVersionDialog = true
+                // Динамічний заголовок з секретною активацією Developer Mode
+                Box(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (selectedContactName != null) {
+                        // Показуємо ім'я контакта (звичайний текст)
+                        Text(
+                            text = selectedContactName!!,
+                            fontSize = adaptiveParams.titleFontSize,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.textPrimary,
+                            letterSpacing = 1.sp,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    } else {
+                        // Показуємо "Call Chooser" з прихованою зоною
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { 
+                                showVersionDialog = true  // Клік на всю Row показує About
                             }
+                        ) {
+                            Text(
+                                text = "Call",
+                                fontSize = adaptiveParams.titleFontSize,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.textPrimary,
+                                letterSpacing = 1.sp
+                            )
+                            
+                            // 🤫 ПРИХОВАНА ЗОНА (30 кліків для Developer Mode)
+                            Box(
+                                modifier = Modifier
+                                    .width(8.dp)  // Ширина пробілу
+                                    .height(adaptiveParams.titleFontSize.value.dp * 1.5f)  // Висота як текст
+                                    .clickable(
+                                        indication = null,  // БЕЗ ripple ефекту
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
+                                        // Логіка секретних кліків
+                                        val now = System.currentTimeMillis()
+                                        
+                                        // Reset якщо пройшло більше 5 секунд
+                                        if (now - this@MainActivity.secretLastClickTime > 5000) {
+                                            this@MainActivity.secretClickCount = 0
+                                        }
+                                        
+                                        this@MainActivity.secretClickCount++
+                                        this@MainActivity.secretLastClickTime = now
+                                        
+                                        // Логування (тільки в debug)
+                                        android.util.Log.d("CallChooser", "🤫 Secret: ${this@MainActivity.secretClickCount}/30")
+                                        
+                                        // ТІЛЬКИ на 30-му кліку щось відбувається!
+                                        if (this@MainActivity.secretClickCount >= 30) {
+                                            // Активуємо Developer Mode
+                                            this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
+                                                .edit()
+                                                .putBoolean("dev_mode_enabled", true)
+                                                .apply()
+                                            
+                                            this@MainActivity.secretClickCount = 0
+                                            
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "🔧 Developer Mode Activated",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
+                            )
+                            
+                            Text(
+                                text = "Chooser",
+                                fontSize = adaptiveParams.titleFontSize,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.textPrimary,
+                                letterSpacing = 1.sp
+                            )
                         }
-                )
+                    }
+                }
                 
                 // Кнопки перемикання мови та теми
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 🔧 Developer Mode кнопка (показується тільки коли активовано)
+                    val devModeEnabled = remember { 
+                        mutableStateOf(this@MainActivity.isDevModeEnabled())
+                    }
+                    
+                    // Перевіряємо на кожному recompose
+                    LaunchedEffect(Unit) {
+                        devModeEnabled.value = this@MainActivity.isDevModeEnabled()
+                    }
+                    
+                    if (devModeEnabled.value) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFF9800).copy(alpha = 0.3f))  // Помаранчевий
+                                .clickable { 
+                                    showDeveloperMenu()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "🔧",
+                                fontSize = 20.sp
+                            )
+                        }
+                    }
+                    
                     // Кнопка UK
                     Box(
                         modifier = Modifier
