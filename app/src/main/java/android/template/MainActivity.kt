@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
     
     private fun isDebugMode(): Boolean {
         // Перевірка debug mode через applicationInfo
-        return (applicationInfo.flags and android.content.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
     
     private fun isDevModeEnabled(): Boolean {
