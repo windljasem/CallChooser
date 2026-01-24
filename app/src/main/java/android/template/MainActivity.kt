@@ -137,15 +137,15 @@ class MainActivity : ComponentActivity() {
         val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
         val installDateStr = dateFormat.format(Date(installDate))
         
+        // ✅ ВИПРАВЛЕННЯ: Інформація в title, setMessage прибрано
+        // Це фіксить проблему на Android 14+ де setItems не показується коли є setMessage
         AlertDialog.Builder(this)
-            .setTitle("🔧 Developer Tools")
-            .setMessage("""
-                Trial Days: $daysUsed / 30 (left: $daysLeft)
-                Premium: ${if (premiumUnlocked) "✅ Unlocked" else "🔒 Locked"}
-                Install Date: $installDateStr
+            .setTitle("""
+                🔧 Developer Tools
                 
-                Device: ${Build.MODEL}
-                Android: ${Build.VERSION.SDK_INT}
+                Trial: $daysUsed / 30 (left: $daysLeft)
+                Premium: ${if (premiumUnlocked) "✅" else "🔒"}
+                Date: $installDateStr
             """.trimIndent())
             .setItems(arrayOf(
                 "🔄 Reset Trial → 30 days",
@@ -822,6 +822,9 @@ class MainActivity : ComponentActivity() {
                                                         "🔧 Developer Mode Activated",
                                                         Toast.LENGTH_LONG
                                                     ).show()
+                                                    
+                                                    // ✅ ВИПРАВЛЕННЯ: Перезапускаємо Activity щоб показати іконку 🔧
+                                                    this@MainActivity.recreate()
                                                 } else {
                                                     // ❌ Неправильні налаштування - нічого не відбувається
                                                     this@MainActivity.secretClickCount = 0
