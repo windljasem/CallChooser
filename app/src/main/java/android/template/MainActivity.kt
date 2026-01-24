@@ -760,84 +760,121 @@ class MainActivity : ComponentActivity() {
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     } else {
-                        // Показуємо "Call Chooser" з прихованою зоною
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { 
-                                showVersionDialog = true  // Клік на всю Row показує About
-                            }
-                        ) {
-                            Text(
-                                text = "Call",
-                                fontSize = adaptiveParams.titleFontSize,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.textPrimary,
-                                letterSpacing = 1.sp
-                            )
-                            
-                            // Захоплюємо поточні значення для використання в onClick
-                            val capturedLanguage = currentLanguage
-                            val capturedTheme = currentTheme
-                            
-                            // 🤫 ПРИХОВАНА ЗОНА (30 кліків для Developer Mode)
-                            Box(
-                                modifier = Modifier
-                                    .width(8.dp)  // Ширина пробілу
-                                    .height(adaptiveParams.titleFontSize.value.dp * 1.5f)  // Висота як текст
-                                    .clickable(
-                                        indication = null,  // БЕЗ ripple ефекту
-                                        interactionSource = remember { MutableInteractionSource() }
-                                    ) {
-                                        // Логіка секретних кліків
-                                        val now = System.currentTimeMillis()
-                                        
-                                        // Reset якщо пройшло більше 5 секунд
-                                        if (now - this@MainActivity.secretLastClickTime > 5000) {
-                                            this@MainActivity.secretClickCount = 0
-                                        }
-                                        
-                                        this@MainActivity.secretClickCount++
-                                        this@MainActivity.secretLastClickTime = now
-                                        
-                                        // Логування (тільки в debug)
-                                        android.util.Log.d("CallChooser", "🤫 Secret: ${this@MainActivity.secretClickCount}/30")
-                                        
-                                        // ТІЛЬКИ на 30-му кліку + UK + Light theme!
-                                        if (this@MainActivity.secretClickCount >= 30) {
-                                            // Перевіряємо умови активації:
-                                            // 1. Локалізація = UK
-                                            // 2. Тема = Light
-                                            if (capturedLanguage == Language.UK && capturedTheme == Theme.LIGHT) {
-                                                // ✅ Всі умови виконано - активуємо Developer Mode
-                                                this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
-                                                    .edit()
-                                                    .putBoolean("dev_mode_enabled", true)
-                                                    .apply()
-                                                
+                        // Показуємо "Call Chooser" з прихованою зоною + Trial Status
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { 
+                                    showVersionDialog = true  // Клік на всю Row показує About
+                                }
+                            ) {
+                                Text(
+                                    text = "Call",
+                                    fontSize = adaptiveParams.titleFontSize,
+                                    fontWeight = FontWeight.Bold,
+                                    color = theme.textPrimary,
+                                    letterSpacing = 1.sp
+                                )
+                                
+                                // Захоплюємо поточні значення для використання в onClick
+                                val capturedLanguage = currentLanguage
+                                val capturedTheme = currentTheme
+                                
+                                // 🤫 ПРИХОВАНА ЗОНА (30 кліків для Developer Mode)
+                                Box(
+                                    modifier = Modifier
+                                        .width(8.dp)  // Ширина пробілу
+                                        .height(adaptiveParams.titleFontSize.value.dp * 1.5f)  // Висота як текст
+                                        .clickable(
+                                            indication = null,  // БЕЗ ripple ефекту
+                                            interactionSource = remember { MutableInteractionSource() }
+                                        ) {
+                                            // Логіка секретних кліків
+                                            val now = System.currentTimeMillis()
+                                            
+                                            // Reset якщо пройшло більше 5 секунд
+                                            if (now - this@MainActivity.secretLastClickTime > 5000) {
                                                 this@MainActivity.secretClickCount = 0
-                                                
-                                                Toast.makeText(
-                                                    this@MainActivity,
-                                                    "🔧 Developer Mode Activated",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            } else {
-                                                // ❌ Неправильні налаштування - нічого не відбувається
-                                                this@MainActivity.secretClickCount = 0
-                                                android.util.Log.d("CallChooser", "❌ Secret: Wrong settings (need UK + Light)")
-                                                // НЕ показуємо Toast - користувач не має знати що щось не так
+                                            }
+                                            
+                                            this@MainActivity.secretClickCount++
+                                            this@MainActivity.secretLastClickTime = now
+                                            
+                                            // Логування (тільки в debug)
+                                            android.util.Log.d("CallChooser", "🤫 Secret: ${this@MainActivity.secretClickCount}/30")
+                                            
+                                            // ТІЛЬКИ на 30-му кліку + UK + Light theme!
+                                            if (this@MainActivity.secretClickCount >= 30) {
+                                                // Перевіряємо умови активації:
+                                                // 1. Локалізація = UK
+                                                // 2. Тема = Light
+                                                if (capturedLanguage == Language.UK && capturedTheme == Theme.LIGHT) {
+                                                    // ✅ Всі умови виконано - активуємо Developer Mode
+                                                    this@MainActivity.getSharedPreferences("callchooser", MODE_PRIVATE)
+                                                        .edit()
+                                                        .putBoolean("dev_mode_enabled", true)
+                                                        .apply()
+                                                    
+                                                    this@MainActivity.secretClickCount = 0
+                                                    
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        "🔧 Developer Mode Activated",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                } else {
+                                                    // ❌ Неправильні налаштування - нічого не відбувається
+                                                    this@MainActivity.secretClickCount = 0
+                                                    android.util.Log.d("CallChooser", "❌ Secret: Wrong settings (need UK + Light)")
+                                                    // НЕ показуємо Toast - користувач не має знати що щось не так
+                                                }
                                             }
                                         }
-                                    }
-                            )
+                                )
+                                
+                                Text(
+                                    text = "Chooser",
+                                    fontSize = adaptiveParams.titleFontSize,
+                                    fontWeight = FontWeight.Bold,
+                                    color = theme.textPrimary,
+                                    letterSpacing = 1.sp
+                                )
+                            }
                             
-                            Text(
-                                text = "Chooser",
-                                fontSize = adaptiveParams.titleFontSize,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.textPrimary,
-                                letterSpacing = 1.sp
-                            )
+                            // ============ TRIAL STATUS ============
+                            if (this@MainActivity.isDevModeEnabled()) {
+                                Text(
+                                    text = trialStrings.devModeActive,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFFF9800),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            } else if (isPremium) {
+                                Text(
+                                    text = "⭐ Premium",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF4CAF50),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            } else if (isTrialActive) {
+                                Text(
+                                    text = if (trialDaysLeft <= 3) {
+                                        trialStrings.trialDaysLeft(trialDaysLeft)
+                                    } else {
+                                        String.format(trialStrings.trialActive, trialDaysLeft)
+                                    },
+                                    fontSize = 10.sp,
+                                    color = if (trialDaysLeft <= 3) Color(0xFFFF9800) else theme.textSecondary,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = trialStrings.trialExpired,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFF44336),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
                         }
                     }
                 }
